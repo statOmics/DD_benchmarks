@@ -1,0 +1,338 @@
+.PHONY: all clean clean-data clean-mock_data clean-sim_data \
+	clean-results clean-figures \
+	data mock_data mock_rep_data \
+	results mock_results mock_results_combined sim_results \
+	analysis figures settings help
+
+
+# Variables
+R := Rscript --no-save --no-restore
+
+RAWDATA=data-raw/GSE174188_CLUES1_adjusted.h5ad
+DATA_CLEANED := data/lupus-SCE-cleaned.rds
+DATA_FILTERED := data/lupus-SCE-filtered.rds
+DATA := $(DATA_CLEANED) $(DATA_FILTERED)
+
+# Subdirectories
+DATADIR := data
+RESDIR := results
+ANALYSISDIR := analysis
+FIGDIR := figures
+
+MOCK_DATA := $(DATADIR)/lupus-SCE-mock-h5/se.rds  # 'seed' dataset for mock data
+
+USE_CELLTYPES := B_mem T4_naive ncM
+USE_ALL := $(USE_CELLTYPES) combined
+
+MOCK_CT_SUBDIR :=$(DATADIR)/lupus-SCE-mock-ct-subsets
+MOCK_CT_DATA := $(patsubst %, $(MOCK_CT_SUBDIR)/lupus-SCE-mock-%.rds, $(USE_CELLTYPES))
+MOCK_COMBINED_DATA := $(DATADIR)/lupus-SCE-mock-combined.rds
+MOCK_REP_DATA := $(patsubst %, $(DATADIR)/lupus-SCE_list-%-mock_replicates.rds, $(USE_CELLTYPES))
+MOCK_COMBINED_REP_DATA := $(DATADIR)/lupus-SCE_list-combined-mock_replicates.rds
+
+PROP_DE := 0.05 #0.01 0.1
+_PROP_DE := $(subst .,_, $(PROP_DE))
+SIM_REP_DATA := $(foreach CT,$(USE_ALL),$(foreach P,$(_PROP_DE),$(DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds))
+
+PKG_STATUS := ../../install.done
+
+# Methods used for both type of analyses
+USE_METHODS_BOTH := muscat sandwichTtestLRPrior1
+
+# Methods used for the "combined celltypes" analyses only
+USE_METHODS_COMBINED := $(USE_METHODS_BOTH) \
+	pseudobulkSandwichTtest \
+	NBpseudobulkSandwichTtest
+
+# Methods used for the "single celltype" analyses only
+USE_METHODS := $(USE_METHODS_BOTH) \
+	edgeRQLF MAST \
+	sandwichTtestLR nonClusteredSandwichTtest \
+	NBsandwichTtestLR \
+	sandwichLR \
+	sandwichHC0 sandwichTtestHC0 \
+	ttest
+
+# Mock and sim results for individual celltypes
+MOCK_RESULTS := $(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),\
+	$(RESDIR)/lupus-$(CT)-mock_results-$(M).rds))
+SIM_RESULTS := $(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),\
+	$(foreach P,$(_PROP_DE),$(RESDIR)/lupus-$(CT)-sim_results-$(M)-prop_DE-$(P).rds)))
+
+# Mock and sim results on combined celltype data
+MOCK_RESULTS_COMBINED := $(foreach M,$(USE_METHODS_COMBINED),$(RESDIR)/lupus-combined-mock_results-$(M).rds)
+SIM_RESULTS_COMBINED := $(foreach M,$(USE_METHODS_COMBINED), \
+	$(foreach P,$(_PROP_DE),$(RESDIR)/lupus-combined-sim_results-$(M)-prop_DE-$(P).rds))
+
+# UMAP_FIGS := $(patsubst %, $(FIGDIR)/lupus-UMAP-%.png, celltype cohort)
+# UMAP_PATIENTS := $(FIGDIR)/lupus-UMAP-patients.rds
+# FIGURES := $(UMAP_FIGS) $(UMAP_PATIENTS)
+
+
+## all: generate all output files
+all: analysis figures results
+	@echo "\nAll jobs done."
+
+
+# DATA ------------------------------------------------------------------------
+
+## data: generate processed data
+data: $(DATA) mock_data mock_rep_data sim_rep_data
+
+$(DATA_CLEANED): scripts/00-anndata-to-SCE.R $(RAWDATA)
+	@echo "\nGenerating $@"
+	mkdir -p data
+	$(R) $<
+
+$(DATA_FILTERED): scripts/01-filter-samples.R $(DATA_CLEANED)
+	@echo "\nGenerating $@"
+	$(R) $<
+
+
+## mock_data: generate mock data
+mock_data: $(MOCK_DATA) $(MOCK_CT_DATA) $(MOCK_COMBINED_DATA)
+
+$(MOCK_DATA): $(DATA_FILTERED) scripts/02-prepare-mock.R $(PKG_STATUS)
+	@echo "\nGenerating $@"
+	mkdir -p $(DATADIR)
+	$(R) scripts/02-prepare-mock.R -v --infile $< --outfile $@
+
+$(MOCK_CT_DATA) &: $(MOCK_DATA) scripts/02b-prepare-mock-ct-subsets.R $(PKG_STATUS)
+	@echo "\nGenerating $(MOCK_CT_DATA)"
+	$(R) scripts/02b-prepare-mock-ct-subsets.R -v --infile $< --out_dir $(MOCK_CT_SUBDIR) \
+		--use_celltypes $(USE_CELLTYPES)
+
+$(MOCK_COMBINED_DATA) &: $(MOCK_DATA) scripts/02c-prepare-mock-combined.R $(PKG_STATUS)
+	@echo "\nGenerating $(MOCK_COMBINED_DATA)"
+	$(R) scripts/02c-prepare-mock-combined.R -v --infile $< --outfile $@ \
+		--use_celltypes $(USE_CELLTYPES)
+
+## mock_rep_data: generate mock data replicates
+mock_rep_data: $(MOCK_REP_DATA) $(MOCK_COMBINED_REP_DATA)
+
+$(DATADIR)/lupus-SCE_list-%-mock_replicates.rds: $(MOCK_CT_SUBDIR)/lupus-SCE-mock-%.rds \
+scripts/03-prepare-mock-replicates.R $(PKG_STATUS)
+	@echo "\nGenerating $@"
+	$(R) scripts/03-prepare-mock-replicates.R -v --infile $< --outfile $@ \
+		--n_mock_replicates 5
+
+$(MOCK_COMBINED_REP_DATA): $(MOCK_COMBINED_DATA) \
+scripts/03-prepare-mock-replicates.R $(PKG_STATUS)
+	@echo "\nGenerating $@"
+	$(R) scripts/03-prepare-mock-replicates.R -v --infile $< --outfile $@ \
+		--n_mock_replicates 5
+
+## sim_rep_data: generate simulated data replicates
+sim_rep_data: $(SIM_REP_DATA)
+
+define sim_rep_rule
+$(DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(subst .,_,$(P)).rds: \
+$(DATADIR)/lupus-SCE_list-$(CT)-mock_replicates.rds \
+scripts/03b-prepare-sim-replicates.R $(PKG_STATUS)
+	@echo "\nGenerating $$@"
+	$(R) scripts/03b-prepare-sim-replicates.R -v --infile $$< --outfile $$@ \
+		--prop_DE $(P)
+endef
+ # --countsimQC
+
+$(foreach CT,$(USE_ALL),$(foreach P,$(PROP_DE),$(eval $(call sim_rep_rule))))
+
+
+# RESULTS ---------------------------------------------------------------------
+
+## results: generate results
+results: mock_results mock_results_combined sim_results sim_results_combined
+
+## mock_results: generate mock DE results on individual celltypes
+mock_results: $(MOCK_RESULTS)
+
+## mock_results_combined: generate mock DE results on combined celltypes
+mock_results_combined: $(MOCK_RESULTS_COMBINED)
+
+## sim_results: generate simulated DE results on individual celltypes
+sim_results: $(SIM_RESULTS)
+
+## sim_results_combined: generate sim DE results on combined celltypes
+sim_results_combined: $(SIM_RESULTS_COMBINED)
+
+# Mock results on individual celltypes
+define run_mock_rule
+$(RESDIR)/lupus-$(CT)-mock_results-$(M).rds: $(DATADIR)/lupus-SCE_list-$(CT)-mock_replicates.rds \
+scripts/04-run-DE-analyses.R $(PKG_STATUS)
+	@echo "\nGenerating $$@ from $$<"
+	mkdir -p $(RESDIR)
+	$(R) scripts/04-run-DE-analyses.R -v -i $$< -o $$@ --method $(M)
+endef
+$(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),$(eval $(call run_mock_rule))))
+
+# MOCK_RESULTS_COMBINED: generate mock DE results on combined celltypes
+define run_mock_combined_rule
+$(RESDIR)/lupus-combined-mock_results-$(M).rds: $(DATADIR)/lupus-SCE_list-combined-mock_replicates.rds \
+scripts/04b-run-DE-analyses-combined.R $(PKG_STATUS)
+	@echo "\nGenerating $$@ from $$<"
+	mkdir -p $(RESDIR)
+	$(R) scripts/04b-run-DE-analyses-combined.R -v -i $$< -o $$@ --method $(M)
+endef
+$(foreach M,$(USE_METHODS_COMBINED),$(eval $(call run_mock_combined_rule)))
+
+define run_sim_rule
+$(RESDIR)/lupus-$(CT)-sim_results-$(M)-prop_DE-$(P).rds: \
+$(DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds \
+scripts/04-run-DE-analyses.R $(PKG_STATUS)
+	@echo "\nGenerating $$@ from $$<"
+	mkdir -p $(RESDIR)
+	$(R) scripts/04-run-DE-analyses.R -v -i $$< -o $$@ --method $(M)
+endef
+$(foreach CT,$(USE_CELLTYPES),$(foreach M,$(USE_METHODS),$(foreach P,$(_PROP_DE),\
+	$(eval $(call run_sim_rule,$(CT),$(M),$(P))))))
+
+# MOCK_RESULTS_COMBINED: generate sim DE results on combined celltypes
+define run_sim_combined_rule
+$(RESDIR)/lupus-combined-sim_results-$(M)-prop_DE-$(P).rds: \
+$(DATADIR)/lupus-SCE_list-combined-sim_replicates-prop_DE-$(P).rds \
+scripts/04b-run-DE-analyses-combined.R $(PKG_STATUS)
+	@echo "\nGenerating $$@ from $$<"
+	mkdir -p $(RESDIR)
+	$(R) scripts/04b-run-DE-analyses-combined.R -v -i $$< -o $$@ --method $(M)
+endef
+$(foreach M,$(USE_METHODS_COMBINED),$(foreach P,$(_PROP_DE),$(eval $(call run_sim_combined_rule))))
+
+
+# ANALYSIS --------------------------------------------------------------------
+
+MOCK_RES_REPORT := $(ANALYSISDIR)/lupus-mock-results.html
+MOCK_RES_COMBINED_REPORT := $(ANALYSISDIR)/lupus-mock-results-combined.html
+
+# Use 1 report per celltype for the simulation results
+SIM_RES_REPORTS := $(foreach CT,$(USE_CELLTYPES),$(ANALYSISDIR)/lupus-sim-results-$(CT).html)
+SIM_RES_COMBINED_REPORT := $(ANALYSISDIR)/lupus-sim-results-combined.html
+
+## analysis: render reports based on results
+analysis: \
+$(MOCK_RES_REPORT) \
+$(SIM_RES_REPORTS) \
+$(MOCK_RES_COMBINED_REPORT) \
+$(SIM_RES_COMBINED_REPORT)
+
+$(MOCK_RES_REPORT): analysis/lupus-mock-results.Rmd $(MOCK_RESULTS) \
+scripts/05-render-lupus-results.R
+	@echo "\nGenerating $@"
+	mkdir -p $(ANALYSISDIR)
+	$(R) scripts/05-render-lupus-results.R -v --rmd-file $< \
+		--out_file $@ \
+		--use_celltypes $(USE_CELLTYPES) \
+		--use_methods $(USE_METHODS)
+
+$(MOCK_RES_COMBINED_REPORT): analysis/lupus-mock-results.Rmd $(MOCK_RESULTS_COMBINED) \
+scripts/05-render-lupus-results.R
+	@echo "\nGenerating $@"
+	mkdir -p $(ANALYSISDIR)
+	$(R) scripts/05-render-lupus-results.R -v --rmd-file $< \
+		--out_file $@ \
+		--use_celltypes combined \
+		--use_methods $(USE_METHODS_COMBINED)
+
+# Run for each celltype individually!
+define sim_report_rule
+$(ANALYSISDIR)/lupus-sim-results-$(CT).html: analysis/lupus-sim-results.Rmd $(SIM_RESULTS) \
+scripts/05-render-lupus-results.R
+	@echo "\nGenerating $$@"
+	mkdir -p $(ANALYSISDIR)
+	$(R) scripts/05-render-lupus-results.R -v --rmd-file $$< \
+		--out_file $$@ \
+		--use_celltypes $(CT) \
+		--use_methods $(USE_METHODS) \
+		--prop_DE $(PROP_DE)
+endef
+$(foreach CT,$(USE_CELLTYPES),$(eval $(call sim_report_rule,$(CT))))
+
+$(SIM_RES_COMBINED_REPORT): analysis/lupus-sim-results-combined.Rmd \
+$(SIM_RESULTS_COMBINED) \
+scripts/05-render-lupus-results.R
+	@echo "\nGenerating $@"
+	mkdir -p $(ANALYSISDIR)
+	$(R) scripts/05-render-lupus-results.R -v --rmd-file $< \
+		--out_file $@ \
+		--use_celltypes combined \
+		--use_methods $(USE_METHODS_COMBINED) \
+		--prop_DE $(PROP_DE)
+
+
+# FIGURES ---------------------------------------------------------------------
+
+## figures: generate figures
+# figures: $(FIGURES)
+
+# # use `&:` to indicate grouped targets
+# $(UMAP_FIGS) &: scripts/lupus-UMAP.R $(DATA_CLEANED)
+# 	@echo "\nGenerating $@"
+# 	$(R) $<
+
+# $(UMAP_PATIENTS): scripts/lupus-UMAP-patients.R $(DATA_FILTERED)
+# 	@echo "\nGenerating $@"
+# 	$(R) $<
+
+
+# Cleaning & Settings ---------------------------------------------------------
+
+## clean-results: remove the generated results
+clean-results: clean-mock_results clean-sim_results
+clean-mock_results:
+	rm -f $(MOCK_RESULTS) $(MOCK_RESULTS_COMBINED)
+clean-sim_results:
+	rm -f $(SIM_RESULTS) $(SIM_RESULTS_COMBINED)
+
+## clean-figures: remove the generated figures
+clean-figures:
+	rm -f $(FIGURES)
+
+## clean: remove all generated files, except processed data
+clean: clean-results clean-figures
+	rm -f $(MOCK_RES_REPORT) $(MOCK_RES_COMBINED_REPORT) $(SIM_RES_REPORTS) $(SIM_RES_COMBINED_REPORT)
+
+## clean-data: remove processed data and all generated files
+clean-data: clean clean-mock_data clean-sim_data
+	rm -f $(DATA) $(MOCK_DATA)
+
+## clean-mock_data: remove mock and sim data (also removes all figures and results)
+clean-mock_data: clean-mock_results clean-sim_data # sim_data depends on mock_data!
+	rm -f $(MOCK_CT_DATA) $(MOCK_REP_DATA) \
+		$(MOCK_COMBINED_DATA) $(MOCK_COMBINED_REP_DATA)
+
+clean-sim_data: clean-sim_results
+	rm -f $(SIM_REP_DATA)
+
+
+## settings: show variables's values
+settings:
+	@echo R: $(R)
+	@echo "\nRAWDATA (input data):" $(RAWDATA)
+	@echo "DATA (processed data):" $(DATA)
+	@echo "\nDATADIR:" $(DATADIR)
+	@echo "RESDIR:" $(RESDIR)
+	@echo "ANALYSISDIR:" $(ANALYSISDIR)
+	@echo "FIGDIR:" $(FIGDIR)
+	@echo "\nUSE_CELLTYPES:" $(USE_CELLTYPES)
+	@echo "MOCK_DATA:" $(MOCK_DATA)
+	@echo "MOCK_CT_DATA:" $(patsubst %, "\n\t*" %, $(MOCK_CT_DATA))
+	@echo "MOCK_COMBINED_DATA:" $(patsubst %, "\n\t*" %, $(MOCK_COMBINED_DATA))
+	@echo "MOCK_REP_DATA:" $(patsubst %, "\n\t*" %, $(MOCK_REP_DATA))
+	@echo "MOCK_COMBINED_REP_DATA:" $(patsubst %, "\n\t*" %, $(MOCK_COMBINED_REP_DATA))
+	@echo "\nPROP_DE:" $(PROP_DE)
+	@echo "SIM_REP_DATA:" $(patsubst %, "\n\t*" %, $(SIM_REP_DATA))
+	@echo "\nUSE_METHODS:" $(USE_METHODS)
+	@echo "USE_METHODS_COMBINED:" $(USE_METHODS_COMBINED)
+	@echo "\nMOCK_RESULTS:" $(patsubst %, "\n\t*" %, $(MOCK_RESULTS))
+	@echo "\nMOCK_RESULTS_COMBINED:" $(patsubst %, "\n\t*" %, $(MOCK_RESULTS_COMBINED))
+	@echo "\nSIM_RESULTS:" $(patsubst %, "\n\t*" %, $(SIM_RESULTS))
+	@echo "\nSIM_RESULTS_COMBINED:" $(patsubst %, "\n\t*" %, $(SIM_RESULTS_COMBINED))
+	@echo "\nMOCK_RES_REPORT:" $(MOCK_RES_REPORT)
+	@echo "MOCK_RES_COMBINED_REPORT:" $(MOCK_RES_COMBINED_REPORT)
+	@echo "SIM_RES_REPORTS:" $(patsubst %, "\n\t*" %, $(SIM_RES_REPORTS))
+	@echo "SIM_RES_COMBINED_REPORT:" $(SIM_RES_COMBINED_REPORT)
+	@echo "\nFIGURES:" $(patsubst %, "\n\t*" %, $(FIGURES))
+
+## help: show all commands.
+help:
+	@grep -h -E '^##' ${MAKEFILE_LIST} | sed -e 's/## //g' \
+	| column -t -s ':'

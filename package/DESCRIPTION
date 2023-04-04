@@ -1,0 +1,36 @@
+Package: SCandwichCompanion
+Title: Helper functions for the SCandwich project
+Version: 0.1.0
+Date: 2022-03-11
+Authors@R:
+    person(
+        "Milan", "Malfait", , "milan.malfait94@gmail.com",
+        role = c("aut", "cre"),
+        comment = c(ORCID = "0000-0001-9144-3701")
+    )
+Description: Collection of helper functions used throughout the SCandwich project.
+License: Artistic-2.0
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Imports:
+    dplyr,
+    edgeR,
+    GEEutils (>= 0.1.0),
+    ggplot2,
+    here,
+    iCOBRA,
+    MAST,
+    methods,
+    muscat,
+    purrr,
+    S4Vectors,
+    scater,
+    scran,
+    scuttle,
+    SingleCellExperiment,
+    stats,
+    SummarizedExperiment,
+    tibble,
+    tidyr
