@@ -57,52 +57,52 @@ all: analysis figures results
 ## data: generate processed data
 data: $(DATA) mock_data mock_rep_data sim_rep_data
 
-#$(DATA_CLEANED): scripts/00-anndata-to-SCE.R $(RAWDATA)
-#	@echo "\nGenerating $@"
-#	mkdir -p data
-#	$(R) $<
+$(DATA_CLEANED): scripts/00-anndata-to-SCE.R $(RAWDATA)
+	@echo "\nGenerating $@"
+	mkdir -p data
+	$(R) $<
 
-#$(DATA_FILTERED): scripts/01-filter-samples.R $(DATA_CLEANED)
-#	@echo "\nGenerating $@"
-#	$(R) $<
+$(DATA_FILTERED): scripts/01-filter-samples.R $(DATA_CLEANED)
+	@echo "\nGenerating $@"
+	$(R) $<
 
 
 ## mock_data: generate mock data
-#mock_data: $(MOCK_DATA) $(MOCK_CT_DATA)
+mock_data: $(MOCK_DATA) $(MOCK_CT_DATA)
 
-#$(MOCK_DATA): $(DATA_FILTERED) scripts/02-prepare-mock.R $(PKG_STATUS)
-#	@echo "\nGenerating $@"
-#	mkdir -p $(DATADIR)
-#	$(R) scripts/02-prepare-mock.R -v --infile $< --outfile $@
+$(MOCK_DATA): $(DATA_FILTERED) scripts/02-prepare-mock.R $(PKG_STATUS)
+	@echo "\nGenerating $@"
+	mkdir -p $(DATADIR)
+	$(R) scripts/02-prepare-mock.R -v --infile $< --outfile $@
 
-#$(MOCK_CT_DATA) &: $(MOCK_DATA) scripts/02b-prepare-mock-ct-subsets.R $(PKG_STATUS)
-#	@echo "\nGenerating $(MOCK_CT_DATA)"
-#	$(R) scripts/02b-prepare-mock-ct-subsets.R -v --infile $< --out_dir $(MOCK_CT_SUBDIR) \
-#		--use_celltypes $(USE_CELLTYPES)
+$(MOCK_CT_DATA) &: $(MOCK_DATA) scripts/02b-prepare-mock-ct-subsets.R $(PKG_STATUS)
+	@echo "\nGenerating $(MOCK_CT_DATA)"
+	$(R) scripts/02b-prepare-mock-ct-subsets.R -v --infile $< --out_dir $(MOCK_CT_SUBDIR) \
+		--use_celltypes $(USE_CELLTYPES)
 
 ## mock_rep_data: generate mock data replicates
-#mock_rep_data: $(MOCK_REP_DATA)
+mock_rep_data: $(MOCK_REP_DATA)
 
-#$(DATADIR)/lupus-SCE_list-%-mock_replicates.rds: $(MOCK_CT_SUBDIR)/lupus-SCE-mock-%.rds \
-#scripts/03-prepare-mock-replicates.R $(PKG_STATUS)
-#	@echo "\nGenerating $@"
-#	$(R) scripts/03-prepare-mock-replicates.R -v --infile $< --outfile $@ \
-#		--n_mock_replicates 5
+$(DATADIR)/lupus-SCE_list-%-mock_replicates.rds: $(MOCK_CT_SUBDIR)/lupus-SCE-mock-%.rds \
+scripts/03-prepare-mock-replicates.R $(PKG_STATUS)
+	@echo "\nGenerating $@"
+	$(R) scripts/03-prepare-mock-replicates.R -v --infile $< --outfile $@ \
+		--n_mock_replicates 5
 
 ## sim_rep_data: generate simulated data replicates
-#sim_rep_data: $(SIM_REP_DATA)
+sim_rep_data: $(SIM_REP_DATA)
 
-#define sim_rep_rule
-#$(DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(subst .,_,$(P)).rds: \
-#$(DATADIR)/lupus-SCE_list-$(CT)-mock_replicates.rds \
-#scripts/03b-prepare-sim-replicates.R $(PKG_STATUS)
-#	@echo "\nGenerating $$@"
-#	$(R) scripts/03b-prepare-sim-replicates.R -v --infile $$< --outfile $$@ \
-#		--prop_DE $(P)
-#endef
+define sim_rep_rule
+$(DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(subst .,_,$(P)).rds: \
+$(DATADIR)/lupus-SCE_list-$(CT)-mock_replicates.rds \
+scripts/03b-prepare-sim-replicates.R $(PKG_STATUS)
+	@echo "\nGenerating $$@"
+	$(R) scripts/03b-prepare-sim-replicates.R -v --infile $$< --outfile $$@ \
+		--prop_DE $(P)
+endef
  # --countsimQC
 
-#$(foreach CT,$(USE_ALL),$(foreach P,$(PROP_DE),$(eval $(call sim_rep_rule))))
+$(foreach CT,$(USE_ALL),$(foreach P,$(PROP_DE),$(eval $(call sim_rep_rule))))
 
 
 # RESULTS ---------------------------------------------------------------------
