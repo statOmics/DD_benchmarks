@@ -16,18 +16,35 @@ apply_bGLM <- function(sce,
                        ...) {
 
     # Prepare for fit
-    bin_counts <- assay(sce)
+    bin_counts <- as.matrix(assay(sce))
     cd <- colData(sce)
-    formula <- as.formula(paste("y", paste(formula, collapse = " ")))
 
-    # fit models
-    mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
-        y <- cbind(bin_counts[i,],
-                   cd$ncells-bin_counts[i,])
-        cd$y <- y
-        mod <- glm(formula = formula, family = "binomial", data = cd)
-        return(mod)
-    })
+    if(all(cd$data_type == "sce")){
+
+        formula <- as.formula(paste("y", paste(formula, collapse = " ")))
+
+        # fit models
+        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+            y <- bin_counts[i,]
+            cd$y <- y
+            mod <- glm(formula = formula, family = "binomial", data = cd)
+            return(mod)
+        })
+
+    } else if(all(cd$data_type == "pb")){
+
+        full_formula <- as.formula(paste("cbind(succes,failure)",
+                                         paste(formula, collapse = " ")))
+
+        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+            cd$succes <- bin_counts[i,]
+            cd$failure <- cd$ncells - cd$succes
+            mod <- glm(formula = full_formula,
+                       family = "binomial",
+                       data = cd)
+            return(mod)
+        })
+    }
 
     # test coefficient of interest
     sum_mod <- lapply(mod, summary)
@@ -56,18 +73,35 @@ apply_qbGLM <- function(sce,
                         ...) {
 
     # Prepare for fit
-    bin_counts <- assay(sce)
+    bin_counts <- as.matrix(assay(sce))
     cd <- colData(sce)
-    formula <- as.formula(paste("y", paste(formula, collapse = " ")))
 
-    # fit models
-    mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
-        y <- cbind(bin_counts[i,],
-                   cd$ncells-bin_counts[i,])
-        cd$y <- y
-        mod <- glm(formula = formula, family = "quasibinomial", data = cd)
-        return(mod)
-    })
+    if(all(cd$data_type == "sce")){
+
+        formula <- as.formula(paste("y", paste(formula, collapse = " ")))
+
+        # fit models
+        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+            y <- bin_counts[i,]
+            cd$y <- y
+            mod <- glm(formula = formula, family = "quasibinomial", data = cd)
+            return(mod)
+        })
+
+    } else if(all(cd$data_type == "pb")){
+
+        full_formula <- as.formula(paste("cbind(succes,failure)",
+                                         paste(formula, collapse = " ")))
+
+        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+            cd$succes <- bin_counts[i,]
+            cd$failure <- cd$ncells - cd$succes
+            mod <- glm(formula = full_formula,
+                       family = "quasibinomial",
+                       data = cd)
+            return(mod)
+        })
+    }
 
     # test coefficient of interest
     sum_mod <- lapply(mod, summary)
@@ -98,24 +132,38 @@ apply_qbGLM_offset <- function(sce,
     bin_counts <- as.matrix(assay(sce))
     cd <- colData(sce)
 
-    # Compute offset for non-aggregated counts
-    # TODO the code will be different for aggregated counts, see below
-    offset <- colMeans(bin_counts)
-    cd$logitOffset <- log(offset/(1-offset))
-    # of <- colMeans(sweep(bin_counts, 2, cd$ncells, "/"))
-    # cd$logitOf <- log(of/(1-of))
+    if(all(cd$data_type == "sce")){
+        offset <- colMeans(bin_counts)
+        cd$logitOffset <- log(offset/(1-offset))
 
-    formula <- as.formula(paste("y", paste(formula, collapse = " "),
-                                "+ offset(logitOffset)"))
+        formula <- as.formula(paste("y", paste(formula, collapse = " "),
+                                    "+ offset(logitOffset)"))
 
-    # fit models
-    mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
-        y <- cbind(bin_counts[i,],
-                   cd$ncells-bin_counts[i,])
-        cd$y <- y
-        mod <- glm(formula = formula, family = "quasibinomial", data = cd)
-        return(mod)
-    })
+        # fit models
+        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+            y <- bin_counts[i,]
+            cd$y <- y
+            mod <- glm(formula = formula, family = "quasibinomial", data = cd)
+            return(mod)
+        })
+
+    } else if(all(cd$data_type == "pb")){
+        offset <- colMeans(sweep(bin_counts, 2, cd$ncells, "/"))
+        cd$logitOffset <- log(offset/(1-offset))
+
+        full_formula <- as.formula(paste("cbind(succes,failure)",
+                                         paste(formula, collapse = " "),
+                                         "+ offset(logitOffset)"))
+
+        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+            cd$succes <- bin_counts[i,]
+            cd$failure <- cd$ncells - cd$succes
+            mod <- glm(formula = full_formula,
+                       family = "quasibinomial",
+                       data = cd)
+            return(mod)
+        })
+    }
 
     # test coefficient of interest
     sum_mod <- lapply(mod, summary)
@@ -147,24 +195,50 @@ apply_qbGLM_offset_squeeze <- function(sce,
     bin_counts <- as.matrix(assay(sce))
     cd <- colData(sce)
 
-    # Compute offset for non-aggregated counts
-    # TODO the code will be different for aggregated counts, see below
-    offset <- colMeans(bin_counts)
-    cd$logitOffset <- log(offset/(1-offset))
-    # of <- colMeans(sweep(bin_counts, 2, cd$ncells, "/"))
-    # cd$logitOf <- log(of/(1-of))
+    if(all(cd$data_type == "sce")){
+        offset <- colMeans(bin_counts)
+        cd$logitOffset <- log(offset/(1-offset))
 
-    formula <- as.formula(paste("y", paste(formula, collapse = " "),
-                                "+ offset(logitOffset)"))
+        formula <- as.formula(paste("y", paste(formula, collapse = " "),
+                                    "+ offset(logitOffset)"))
 
-    # fit models
-    mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
-        y <- cbind(bin_counts[i,],
-                   cd$ncells-bin_counts[i,])
-        cd$y <- y
-        mod <- glm(formula = formula, family = "quasibinomial", data = cd)
-        return(mod)
-    })
+        # fit models
+        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+            y <- bin_counts[i,]
+            cd$y <- y
+            mod <- glm(formula = formula, family = "quasibinomial", data = cd)
+            return(mod)
+        })
+
+    } else if(all(cd$data_type == "pb")){
+        offset <- colMeans(sweep(bin_counts, 2, cd$ncells, "/"))
+        cd$logitOffset <- log(offset/(1-offset))
+
+        full_formula <- as.formula(paste("cbind(succes,failure)",
+                                         paste(formula, collapse = " "),
+                                         "+ offset(logitOffset)"))
+
+        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+            cd$succes <- bin_counts[i,]
+            cd$failure <- cd$ncells - cd$succes
+            mod <- glm(formula = full_formula,
+                       family = "quasibinomial",
+                       data = cd)
+            return(mod)
+        })
+    }
+
+    # mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+    #     countsAll <- cbind(bin_counts[i,],
+    #                        cd$ncells - bin_counts[i,])
+    #     full_formula <- as.formula(paste("countsAll",
+    #                                      paste(formula, collapse = " "),
+    #                                      "+ offset(logitOffset)"))
+    #     mod <- glm(formula = full_formula,
+    #                family = "quasibinomial",
+    #                data = cd)
+    #     return(mod)
+    # })
 
     # test coefficient of interest
     dfresid_mod <- sapply(mod, function(mod){mod$df.residual})

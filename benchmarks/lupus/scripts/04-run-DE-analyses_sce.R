@@ -40,7 +40,7 @@ if (verbose) {
 
 ## Directory setup
 here_root <- "benchmarks/lupus"
-here::i_am(file.path(here_root, "scripts", "04-run-DE-analyses.R"))
+here::i_am(file.path(here_root, "scripts", "04-run-DE-analyses_sce.R"))
 
 in_file <- here::here(here_root, args$infile)
 out_file <- here::here(here_root, args$outfile)
@@ -78,15 +78,8 @@ sce_list <- map(sce_list, prepare_SCE,
 ## also retain the original counts
 sce_list_bin <- lapply(sce_list, function(element){
     assay(element)[assay(element)>=1] <- 1
+    element$data_type <- "sce"
     return(element)
-})
-
-## Pseudobulk the data
-pb_list_bin <- lapply(sce_list_bin, function(element){
-    pb_bin <- aggregateAcrossCells(element,
-                                   ids = element$ind_cov)
-    colnames(pb_bin) <- paste0("identifier_", 1:ncol(pb_bin))
-    return(pb_bin)
 })
 
 # Run DE analyses ---------------------------------------------------------
