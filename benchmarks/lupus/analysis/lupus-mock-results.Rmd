@@ -1,6 +1,6 @@
 ---
 title: "Lupus data mock DE results"
-author: "Milan Malfait"
+authors: "Milan Malfait & Jeroen Gilis"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   html_document:
@@ -14,6 +14,7 @@ output:
 params:
     methods: !r c("muscat", "ttest")
     celltypes: "ncM"
+    datatype: "sce"
 editor_options:
   chunk_output_type: console
 ---
@@ -46,7 +47,6 @@ library(kableExtra)
 library(SCandwichCompanion)
 ```
 
-
 # Setup
 
 ```{r}
@@ -61,12 +61,12 @@ fig_dir <- here::here(here_root, "figures")
 ```{r, echo=FALSE, results='asis'}
 methods <- params$methods
 celltypes <- params$celltypes
-
-combined <- length(celltypes) == 1 && (celltypes == "combined")
+datatype <- params$datatype
 
 cat(
   "\n* Using `methods`: ", paste(methods, collapse = ", "),
-  "\n* Using `celltypes`: ", paste(celltypes, collapse = ", ")
+  "\n* Using `celltypes`: ", paste(celltypes, collapse = ", "),
+  "\n* Using `datatype`: ", paste(datatype, collapse = ", ")
 )
 ```
 
@@ -75,22 +75,17 @@ cat(
 ```{r load-results}
 res_files <- map(celltypes, ~ get_mock_res_files(
     dataset = "lupus",
-    methods = methods, celltype = .x
+    datatype = datatype,
+    methods = methods,
+    celltype = .x
 )) %>%
     set_names(celltypes)
 
 res_list <- map_depth(res_files, 2, readRDS)
 
-## Do some wrangling when using 'combined' celltypes
-if (combined) {
-    ## Only 1 top-level entry + transpose so that celltypes are the top-level
-    res_list <- transpose(res_list[[1]])
-}
-
 ## Check for expected data structure
 stopifnot(unlist(map_depth(res_list, 3, ~ is.data.frame(.x$results))))
 ```
-
 
 ## Load SCE objects
 

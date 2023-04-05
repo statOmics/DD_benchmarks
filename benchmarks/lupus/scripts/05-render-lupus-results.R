@@ -29,6 +29,10 @@ parser$add_argument("--use_methods",
     type = "character", nargs = "+",
     help = "Methods to use."
 )
+parser$add_argument("--datatype",
+    type = "character", nargs = "+",
+    help = "Data type to use."
+)
 ## Only relevant for sim-results
 parser$add_argument("--prop_DE",
     type = "double", nargs = "+",
@@ -41,6 +45,7 @@ verbose <- args$verbose
 
 celltypes <- args$use_celltypes
 methods <- args$use_methods
+datatype <- args$datatype
 prop_DE <- args$prop_DE
 
 if (verbose) {
@@ -48,6 +53,7 @@ if (verbose) {
     message("Using output file: ", args$out_file)
     message("Using celltypes: ", paste(celltypes, collapse = ", "))
     message("Using methods: ", paste(methods, collapse = ", "))
+    message("Using datatype: ", paste(datatype, collapse = ", "))
     if (!is.null(prop_DE)) {
         message("Using prop_DE: ", paste(prop_DE, collapse = ", "))
     }
@@ -70,7 +76,9 @@ stopifnot(file.exists(rmd_file))
 
 # Render Rmd --------------------------------------------------------------
 
-rmd_params <- list(methods = methods, celltypes = celltypes)
+rmd_params <- list(methods = methods,
+                   celltypes = celltypes,
+                   datatype = datatype)
 if (!is.null(prop_DE)) {
     rmd_params[["prop_DE"]] <- prop_DE
 }

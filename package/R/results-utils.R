@@ -1,25 +1,36 @@
 ## Get result files
 
 #' @export
-get_mock_res_files <- function(dataset, methods,
+get_mock_res_files <- function(dataset,
+                               methods,
+                               datatype,
                                celltype = NULL,
                                n_patients = NULL) {
     out <- .get_res_files(
-        dataset = dataset, methods = methods, which = "mock_results",
-        celltype = celltype, n_patients = n_patients
+        dataset = dataset,
+        methods = methods,
+        datatype = datatype,
+        which = "mock_results",
+        celltype = celltype,
+        n_patients = n_patients
     )
     setNames(out, methods)
 }
 
 #' @export
-get_sim_res_files <- function(dataset, methods, prop_DE,
+get_sim_res_files <- function(dataset,
+                              methods,
+                              datatype,
+                              prop_DE,
                               celltype = NULL,
                               n_patients = NULL) {
     stopifnot(length(prop_DE) == 1)
     prop_DE_ <- sub("\\.", "_", prop_DE)
     method_prop_DE <- paste0(methods, "-prop_DE-", prop_DE_)
     out <- .get_res_files(
-        dataset = dataset, methods = method_prop_DE,
+        dataset = dataset,
+        methods = method_prop_DE,
+        datatype = datatype,
         which = "sim_results",
         celltype = celltype,
         n_patients = n_patients
@@ -27,7 +38,9 @@ get_sim_res_files <- function(dataset, methods, prop_DE,
     setNames(out, methods)
 }
 
-.get_res_files <- function(dataset, methods,
+.get_res_files <- function(dataset,
+                           methods,
+                           datatype,
                            which = c("mock_results", "sim_results"),
                            celltype = NULL,
                            n_patients = NULL) {
@@ -37,7 +50,7 @@ get_sim_res_files <- function(dataset, methods, prop_DE,
     if (!is.null(n_patients)) dataset <- paste(dataset, n_patients, sep = "-")
     if (!is.null(celltype)) dataset <- paste(dataset, celltype, sep = "-")
 
-    fnames <- paste(dataset, which, methods, sep = "-")
+    fnames <- paste(dataset, which, datatype, methods, sep = "-")
     out <- file.path(res_dir, paste0(fnames, ".rds"))
     .check_existing_files(out)
 
