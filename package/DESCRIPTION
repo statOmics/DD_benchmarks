@@ -1,6 +1,6 @@
 Package: DDCompanion
 Title: Helper functions for the differential detection project
-Version: 0.1.1
+Version: 0.1.2
 Date: 2023-04-06
 Authors@R:
     c(person(
@@ -13,7 +13,7 @@ Authors@R:
         role = "aut",
         comment = c(ORCID = "0000-0001-8415-0943")
     ))
-Description: Collection of helper functions used throughout the SCandwich project.
+Description: Collection of helper functions used throughout the differential detection project.
 License: Artistic-2.0
 Encoding: UTF-8
 LazyData: true
