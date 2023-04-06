@@ -1,7 +1,7 @@
 ---
 title: "Lupus data simulation DE results"
 subtitle: "Celltype: `r params$celltypes`"
-author: "Milan Malfait"
+author: "Milan Malfait & Jeroen Gilis"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   html_document:
@@ -16,15 +16,12 @@ params:
     methods: !r c("muscat", "ttest")
     prop_DE: !r c(0.01, 0.05, 0.1)
     celltypes: "ncM"
+    datatype: "sce"
 editor_options:
   chunk_output_type: console
 ---
 
-
 <!-- NOTE: this report should be run with a single celltype only! -->
-
-
-
 
 ```{r setup, include=FALSE, cache=FALSE}
 knitr::opts_chunk$set(
@@ -77,20 +74,24 @@ celltype <- params$celltypes
 
 methods <- params$methods
 prop_DE <- params$prop_DE
+datatype <- params$datatype
 
 cat(
   "\n* Using `methods`: ", paste(methods, collapse = ", "),
   "\n* Using `celltype`: ", celltype,
-  "\n* Using `prop_DE`: ", paste(prop_DE, collapse = ", ")
+  "\n* Using `prop_DE`: ", paste(prop_DE, collapse = ", "),
+  "\n* Using `datatype`: ", paste(datatype, collapse = ", ")
 )
 ```
 
 ## Load results
 
 ```{r load-results}
-res_files <- map(prop_DE, ~ get_sim_res_files(
-    dataset = "lupus", methods = methods,
-    prop_DE = .x, celltype = celltype
+res_files <- map(prop_DE, ~ get_sim_res_files(dataset = "lupus", 
+                                              methods = methods,
+                                              datatype = datatype,
+                                              prop_DE = .x, 
+                                              celltype = celltype
 )) %>% set_names(paste0("prop_DE_", prop_DE))
 res_list <- map_depth(res_files, 2, readRDS)
 

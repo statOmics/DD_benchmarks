@@ -180,13 +180,15 @@ MOCK_RES_REPORT := $(ANALYSISDIR)/lupus-mock-results-sce.html
 MOCK_RES_PB_REPORT := $(ANALYSISDIR)/lupus-mock-results-pb.html
 
 ## Use 1 report per celltype for the simulation results
-SIM_RES_REPORTS := $(foreach CT,$(USE_CELLTYPES),$(ANALYSISDIR)/lupus-sim-results-$(CT)_sce.html)
+SIM_RES_REPORTS := $(foreach CT,$(USE_CELLTYPES),$(ANALYSISDIR)/lupus-sim-results-$(CT)-sce.html)
+SIM_RES_PB_REPORTS := $(foreach CT,$(USE_CELLTYPES),$(ANALYSISDIR)/lupus-sim-results-$(CT)-pb.html)
 
 ## analysis: render reports based on results
 analysis: \
 $(MOCK_RES_REPORT) \
 $(SIM_RES_REPORTS) \
-$(MOCK_RES_PB_REPORT)
+$(MOCK_RES_PB_REPORT) \
+$(SIM_RES_PB_REPORTS)
 
 ## Report for single-cell mock results
 #$(MOCK_RES_REPORT): analysis/lupus-mock-results.Rmd $(MOCK_RESULTS) \
@@ -199,29 +201,45 @@ $(MOCK_RES_PB_REPORT)
 #		--use_methods $(USE_METHODS) \
 #		--datatype sce
 
-## Report for single-cell simulation results
-#define sim_report_rule
-#$(ANALYSISDIR)/lupus-sim-results-$(CT)_sce.html: analysis/lupus-sim-results.Rmd $(SIM_RESULTS) \
-#scripts/05-render-lupus-results.R
-#	@echo "\nGenerating $$@"
-#	mkdir -p $(ANALYSISDIR)
-#	$(R) scripts/05-render-lupus-results.R -v --rmd-file $$< \
-#		--out_file $$@ \
-#		--use_celltypes $(CT) \
-#		--use_methods $(USE_METHODS) \
-#		--prop_DE $(PROP_DE)
-#endef
-#$(foreach CT,$(USE_CELLTYPES),$(eval $(call sim_report_rule,$(CT))))
-
-$(MOCK_RES_PB_REPORT): analysis/lupus-mock-results.Rmd $(MOCK_RESULTS_PB) \
+# Report for single-cell simulation results
+define sim_report_rule
+$(ANALYSISDIR)/lupus-sim-results-$(CT)-sce.html: analysis/lupus-sim-results.Rmd $(SIM_RESULTS) \
 scripts/05-render-lupus-results.R
-	@echo "\nGenerating $@"
+	@echo "\nGenerating $$@"
 	mkdir -p $(ANALYSISDIR)
-	$(R) scripts/05-render-lupus-results.R -v --rmd-file $< \
-		--out_file $@ \
-		--use_celltypes $(USE_CELLTYPES) \
+	$(R) scripts/05-render-lupus-results.R -v --rmd-file $$< \
+		--out_file $$@ \
+		--use_celltypes $(CT) \
 		--use_methods $(USE_METHODS) \
+		--prop_DE $(PROP_DE) \
+		--datatype sce
+endef
+$(foreach CT,$(USE_CELLTYPES),$(eval $(call sim_report_rule,$(CT))))
+
+#$(MOCK_RES_PB_REPORT): analysis/lupus-mock-results.Rmd $(MOCK_RESULTS_PB) \
+#scripts/05-render-lupus-results.R
+#	@echo "\nGenerating $@"
+#	mkdir -p $(ANALYSISDIR)
+#	$(R) scripts/05-render-lupus-results.R -v --rmd-file $< \
+#		--out_file $@ \
+#		--use_celltypes $(USE_CELLTYPES) \
+#		--use_methods $(USE_METHODS) \
+#		--datatype pb
+
+# Report for pseudobulk simulation results
+define sim_report_rule
+$(ANALYSISDIR)/lupus-sim-results-$(CT)-pb.html: analysis/lupus-sim-results.Rmd $(SIM_RESULTS) \
+scripts/05-render-lupus-results.R
+	@echo "\nGenerating $$@"
+	mkdir -p $(ANALYSISDIR)
+	$(R) scripts/05-render-lupus-results.R -v --rmd-file $$< \
+		--out_file $$@ \
+		--use_celltypes $(CT) \
+		--use_methods $(USE_METHODS) \
+		--prop_DE $(PROP_DE) \
 		--datatype pb
+endef
+$(foreach CT,$(USE_CELLTYPES),$(eval $(call sim_report_rule,$(CT))))
 
 ## settings: show variables's values
 settings:

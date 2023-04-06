@@ -9,8 +9,8 @@ get_mock_res_files <- function(dataset,
     out <- .get_res_files(
         dataset = dataset,
         methods = methods,
-        datatype = datatype,
         which = "mock_results",
+        datatype = datatype,
         celltype = celltype,
         n_patients = n_patients
     )
