@@ -11,5 +11,10 @@ Collection of helper functions used throughout the SCandwich project.
 \author{
 \strong{Maintainer}: Milan Malfait \email{milan.malfait94@gmail.com} (\href{https://orcid.org/0000-0001-9144-3701}{ORCID})
 
+Authors:
+\itemize{
+  \item Jeroen Gilis \email{jeroen.gilis1@gmail.com} (\href{https://orcid.org/0000-0001-8415-0943}{ORCID})
+}
+
 }
 \keyword{internal}

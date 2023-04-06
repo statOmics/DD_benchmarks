@@ -3,7 +3,7 @@ Title: Helper functions for the SCandwich project
 Version: 0.1.1
 Date: 2023-04-06
 Authors@R:
-    person(
+    c(person(
         "Milan", "Malfait", , "milan.malfait94@gmail.com",
         role = c("aut", "cre"),
         comment = c(ORCID = "0000-0001-9144-3701")
@@ -12,7 +12,7 @@ Authors@R:
         "Jeroen", "Gilis", , "jeroen.gilis1@gmail.com",
         role = "aut",
         comment = c(ORCID = "0000-0001-8415-0943")
-    )
+    ))
 Description: Collection of helper functions used throughout the SCandwich project.
 License: Artistic-2.0
 Encoding: UTF-8

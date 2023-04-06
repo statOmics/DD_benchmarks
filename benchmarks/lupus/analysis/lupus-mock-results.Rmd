@@ -87,6 +87,11 @@ res_list <- map_depth(res_files, 2, readRDS)
 stopifnot(unlist(map_depth(res_list, 3, ~ is.data.frame(.x$results))))
 ```
 
+```{r}
+res_list$B_mem$bGLM$replicate_1$results$FDR
+```
+
+
 ## Load SCE objects
 
 ```{r load-SCE-objects}
@@ -140,7 +145,6 @@ res_tables <- map_depth(
 ) %>%
     map(combine_tables, .id = "method")
 ```
-
 
 # Visualize results
 
