@@ -1,5 +1,5 @@
-Package: SCandwichCompanion
-Title: Helper functions for the SCandwich project
+Package: DDCompanion
+Title: Helper functions for the differential detection project
 Version: 0.1.1
 Date: 2023-04-06
 Authors@R:
@@ -26,9 +26,7 @@ Imports:
     ggplot2,
     here,
     iCOBRA,
-    MAST,
     methods,
-    muscat,
     purrr,
     S4Vectors,
     scater,
