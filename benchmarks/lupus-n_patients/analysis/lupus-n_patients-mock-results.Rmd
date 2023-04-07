@@ -42,7 +42,7 @@ theme_set(theme_light())
 library(scuttle)
 
 library(kableExtra)
-library(SCandwichCompanion)
+library(DDCompanion)
 ```
 
 # Setup

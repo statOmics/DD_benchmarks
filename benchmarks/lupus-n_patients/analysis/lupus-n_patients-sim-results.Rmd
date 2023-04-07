@@ -44,7 +44,7 @@ library(scuttle)
 library(iCOBRA)
 
 library(kableExtra)
-library(SCandwichCompanion)
+library(DDCompanion)
 ```
 
 # Setup

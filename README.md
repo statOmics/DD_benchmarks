@@ -36,6 +36,7 @@ Download the
 The `benchmarks/` folder contains the following benchmarks:
 
 * `lupus/`: benchmarks on the Lupus data
+* `lupus-n_patients/`: benchmarking the effect of the number of subjects using the Lupus data
 
 Each subfolder is accompanied by R scripts in a `scripts/` folder and R Markdown files in the
 `analysis/` folder. `Makefile`s are provided to control the order in which the scripts should be
@@ -46,6 +47,7 @@ From the command line at the root of this repository, run
 
 ```sh
 make lupus
+make lupus-n_patients
 ```
 
 to run each of the respective benchmarks. Or simply
