@@ -13,10 +13,10 @@ output:
     number_sections: false
     code_folding: "hide"
 params:
-    methods: !r c("muscat", "ttest")
+    methods: !r c("edgeR_NB", "qbGLM_offset_squeeze")
     prop_DE: !r c(0.01, 0.05, 0.1)
     celltypes: "ncM"
-    datatype: "sce"
+    datatype: "pb"
 editor_options:
   chunk_output_type: console
 ---
@@ -341,7 +341,6 @@ fdr_tpr_plots_zoomed <- map(cobra_objects, function(cobra_list) {
 ```{r, echo=FALSE, fig.width=16, results='asis', warning=FALSE}
 print_plots(fdr_tpr_plots_zoomed)
 ```
-
 
 # Session info {-}
 

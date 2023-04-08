@@ -22,7 +22,7 @@ parser$add_argument("--out_file",
 )
 parser$add_argument("--use_celltypes",
     type = "character", nargs = "+",
-    default = c("T4naive", "Bmem", "ncM"),
+    default = c("T4_naive", "B_mem", "ncM"),
     help = "Celltypes to use. Default: \'%(default)s\'"
 )
 parser$add_argument("--use_methods",

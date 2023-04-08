@@ -81,7 +81,7 @@ cat(
 
 res_files <- map(n_patients, ~ get_mock_res_files(
     dataset = "lupus-n_patients",
-    methods = methods, celltype = celltype,
+    methods = methods, celltype = celltype, datatype = "pb",
     n_patients = .x
 )) %>%
     set_names(paste0("n_patients_", n_patients))

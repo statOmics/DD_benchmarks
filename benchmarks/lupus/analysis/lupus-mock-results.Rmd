@@ -44,7 +44,7 @@ library(scuttle)
 library(scater)
 
 library(kableExtra)
-library(SCandwichCompanion)
+library(DDCompanion)
 ```
 
 # Setup
@@ -87,11 +87,6 @@ res_list <- map_depth(res_files, 2, readRDS)
 stopifnot(unlist(map_depth(res_list, 3, ~ is.data.frame(.x$results))))
 ```
 
-```{r}
-res_list$B_mem$bGLM$replicate_1$results$FDR
-```
-
-
 ## Load SCE objects
 
 ```{r load-SCE-objects}
@@ -124,8 +119,6 @@ Subjects are divided across mock groups as follows:
 map(sce_objects[[1]], function(x) table(x$ind_cov, x$mock_group))
 ```
 
-
-
 # Extract results of interest
 
 ## Runtimes
@@ -134,7 +127,6 @@ map(sce_objects[[1]], function(x) table(x$ind_cov, x$mock_group))
 ## Get runtimes for each celltype
 runtimes <- map(res_list, ~ map_dfr(.x, get_runtimes, depth = 1, .id = "method"))
 ```
-
 
 ## P-values
 
@@ -160,7 +152,6 @@ runtime_plots <- imap(runtimes,
 ```{r, results='asis', echo=FALSE}
 print_plots(runtime_plots)
 ```
-
 
 ## Number of significant genes for different FDR levels {.tabset}
 

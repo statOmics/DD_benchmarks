@@ -11,7 +11,7 @@ PKG_STATUS := ../../install.done
 
 # Number of patients to use for MOCK data, if missing will use all available
 N_PATIENTS := 10 20 30
-USE_CELLTYPES := T4_naive # ncM add back later
+USE_CELLTYPES := T4_naive ncM
 
 INPUT_DATADIR := ../lupus/data
 DATADIR := data
@@ -43,9 +43,9 @@ USE_METHODS := edgeR_QP edgeR_NB \
 
 # Mock and sim results for individual celltypes
 MOCK_RESULTS := $(foreach NP,$(N_PATIENTS),$(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),\
-	$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-mock_results-$(M).rds)))
+	$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-mock_results-pb-$(M).rds)))
 SIM_RESULTS := $(foreach NP,$(N_PATIENTS),$(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),\
-	$(foreach P,$(_PROP_DE),$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-sim_results-$(M)-prop_DE-$(P).rds))))
+	$(foreach P,$(_PROP_DE),$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-sim_results-pb-$(M)-prop_DE-$(P).rds))))
 
 
 ## all: generate all output files
@@ -100,7 +100,7 @@ sim_results: $(SIM_RESULTS)
 
 # Mock results on individual celltypes
 define run_mock_rule
-$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-mock_results-$(M).rds: \
+$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-mock_results-pb-$(M).rds: \
 $(DATADIR)/lupus-n_patients-$(NP)-SCE_list-$(CT)-mock_replicates.rds \
 scripts/02-run-DE-analyses.R
 	@echo "\nGenerating $$@ from $$<"
@@ -111,7 +111,7 @@ $(foreach NP,$(N_PATIENTS),$(foreach CT,$(USE_CELLTYPES),$(foreach M,$(USE_METHO
 	$(eval $(call run_mock_rule)))))
 
 define run_sim_rule
-$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-sim_results-$(M)-prop_DE-$(P).rds: \
+$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-sim_results-pb-$(M)-prop_DE-$(P).rds: \
 $(DATADIR)/lupus-n_patients-$(NP)-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds \
 scripts/02-run-DE-analyses.R $(PKG_STATUS)
 	@echo "\nGenerating $$@ from $$<"

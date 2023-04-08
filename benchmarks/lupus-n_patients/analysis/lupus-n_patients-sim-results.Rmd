@@ -88,6 +88,7 @@ res_files <- map(n_patients, ~ get_sim_res_files(
     methods = methods,
     prop_DE = prop_DE,
     celltype = celltype,
+    datatype = "pb",
     n_patients = .x
 )) %>%
     set_names(paste0("n_patients_", n_patients))
