@@ -17,7 +17,7 @@ lupus-n_patients: package
 ledergor: package
 	$(MAKE) -C benchmarks/ledergor
 
-## package: install the helper package SCandwichCompanion
+## package: install the helper package DDCompanion
 package: install.done
 install.done: package/DESCRIPTION
 	@echo "\nInstalling helper package"

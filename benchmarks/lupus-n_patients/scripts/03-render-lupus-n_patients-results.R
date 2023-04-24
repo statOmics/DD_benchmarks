@@ -32,7 +32,7 @@ parser$add_argument("--use_celltype",
 )
 parser$add_argument("--use_methods",
     type = "character", nargs = "+",
-    default = c("muscat", "sandwichTtestLRPrior1"),
+    default = c("muscat"),
     help = "Methods to use."
 )
 

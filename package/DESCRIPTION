@@ -22,7 +22,6 @@ RoxygenNote: 7.2.3
 Imports:
     dplyr,
     edgeR,
-    GEEutils (>= 0.1.0),
     ggplot2,
     here,
     iCOBRA,

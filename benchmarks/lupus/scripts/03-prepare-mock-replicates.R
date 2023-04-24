@@ -48,7 +48,7 @@ stopifnot(dir.exists(dirname(out_file)))
 ## Libraries
 suppressPackageStartupMessages({
     library(SingleCellExperiment)
-    library(SCandwichCompanion)
+    library(DDCompanion)
 })
 
 seed <- 20220505
@@ -72,7 +72,7 @@ n_mock_replicates <- args$n_mock_replicates
 # It does not matter too much, it just would save ~500Mb storage
 set.seed(seed)
 sce_list <- replicate(n_mock_replicates,
-    SCandwichCompanion::createMockGroups(sce),
+    DDCompanion::createMockGroups(sce),
     simplify = FALSE
 )
 names(sce_list) <- paste0("replicate_", seq_len(n_mock_replicates))

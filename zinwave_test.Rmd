@@ -1,0 +1,399 @@
+---
+title: "zinbwave_test"
+output: html_document
+date: "2023-04-20"
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(scuttle)
+library(zinbwave)
+library(gamlss)
+library(gamlss.tr)
+library(pscl)
+library(edgeR)
+```
+
+# Mock analysis
+
+```{r}
+sce_ncM <- readRDS("./benchmarks/lupus/data/lupus-SCE_list-ncM-mock_replicates.rds")
+sce <- sce_ncM$replicate_1
+assay(sce) <- as.matrix(assay(sce))
+dim(sce)
+design <- model.matrix(~ factor(ind_cov), colData(sce))
+```
+
+## Zinbwave
+
+```
+sce_zinb <- zinbwave(sce, X=design, K = 0, observationalWeights = TRUE)
+saveRDS(sce_zinb, "sce_zinb_mock.Rds")
+```
+
+```{r}
+sce_zinb <- readRDS("sce_zinb.Rds")
+weights <- assay(sce_zinb, "weights")
+unname(weights[1:10,1:5])
+```
+
+```{r}
+pb <- aggregateAcrossCells(sce_zinb,
+                           ids = sce_zinb$ind_cov,
+                           use.assay.type = "weights")
+colnames(pb) <- paste0("identifier_", 1:ncol(pb))
+pb$data_type <- "pb"
+pb$group_id <- pb$mock_group
+pb$cluster_id <- factor("ncM")
+pb
+```
+
+```{r}
+apply_qbGLM_offset_local <- function(sce,
+                               coef_test = "group_idB",
+                               formula = ~ batch_cov + group_id,
+                               ...) {
+
+    # Prepare for fit
+    bin_counts <- as.matrix(assay(sce))
+    cd <- colData(sce)
+
+    if(all(cd$data_type == "sce")){
+        offset <- colMeans(bin_counts)
+        cd$logitOffset <- log(offset/(1-offset))
+
+        formula <- as.formula(paste("y", paste(formula, collapse = " "),
+                                    "+ offset(logitOffset)"))
+
+        # fit models
+        mod <- lapply(seq_len(nrow(bin_counts)), function(i){
+            y <- bin_counts[i,]
+            cd$y <- y
+            mod <- glm(formula = formula, family = "quasibinomial", data = cd)
+            return(mod)
+        })
+
+    } else if(all(cd$data_type == "pb")){
+        offset <- colMeans(sweep(bin_counts, 2, cd$ncells, "/"))
+        cd$logitOffset <- log(offset/(1-offset))
+
+        full_formula <- as.formula(paste("cbind(succes,failure)",
+                                         paste(formula, collapse = " "),
+                                         "+ offset(logitOffset)"))
+
+        mod <- lapply(seq_len(nrow(bin_counts)), function(i){
+            cd$succes <- bin_counts[i,]
+            cd$failure <- cd$ncells - cd$succes
+            mod <- glm(formula = full_formula,
+                       family = "quasibinomial",
+                       data = cd)
+            return(mod)
+        })
+    }
+
+    # test coefficient of interest
+    sum_mod <- lapply(mod, summary)
+    beta <- sapply(sum_mod, function(summod){coef(summod)[coef_test,1]})
+    var_unscaled <- sapply(sum_mod, function(summod){summod$cov.unscaled[coef_test,2]})
+    SE <- sapply(sum_mod, function(summod){coef(summod)[coef_test,2]})
+    disp <- sapply(sum_mod, function(summod){summod$dispersion})
+    pval <- sapply(sum_mod, function(summod){coef(summod)[coef_test,4]})
+    res <- data.frame(gene = rownames(bin_counts),
+                      cluster_id = levels(cd$cluster_id),
+                      logOdds = beta,
+                      var_unscaled = var_unscaled,
+                      dispersion = disp,
+                      SE = SE,
+                      Wald = (beta^2)/SE,
+                      PValue = pval,
+                      FDR = p.adjust(pval, method = "BH"),
+                      comparsion = coef_test)
+    return(res)
+}
+```
+
+
+```{r}
+res <- apply_qbGLM_offset_local(sce = pb)
+hist(res$PValue, breaks=20)
+```
+
+## Regular
+
+```{r}
+sce_bin <- sce
+assay(sce_bin)[assay(sce_bin)>=1] <- 1
+
+pb_orig <- aggregateAcrossCells(sce_bin,
+                                ids = sce_bin$ind_cov,
+                                use.assay.type = "counts")
+colnames(pb_orig) <- paste0("identifier_", 1:ncol(pb_orig))
+pb_orig$data_type <- "pb"
+pb_orig$group_id <- pb_orig$mock_group
+pb_orig$cluster_id <- factor("ncM")
+pb_orig
+```
+
+```{r}
+res <- apply_qbGLM_offset_local(sce = pb_orig)
+hist(res$PValue, breaks=20)
+```
+
+# Simulations
+
+```{r}
+sce_ncM <- readRDS("./benchmarks/lupus/data/lupus-SCE_list-ncM-sim_replicates-prop_DE-0_05.rds")
+sce <- sce_ncM$replicate_1
+assay(sce) <- as.matrix(assay(sce))
+dim(sce)
+design <- model.matrix(~ factor(ind_cov), colData(sce))
+```
+
+## Zinbwave
+
+```{r}
+sce_zinb_DE <- zinbwave(sce, X=design, K = 0, observationalWeights = TRUE)
+saveRDS(sce_zinb_DE, "sce_zinb_DE.Rds")
+```
+
+```{r}
+sce_zinb_DE <- readRDS("sce_zinb_DE.Rds")
+weights <- assay(sce_zinb_DE, "weights")
+unname(weights[1:10,1:5])
+```
+
+```{r}
+pb <- aggregateAcrossCells(sce_zinb_DE,
+                           ids = sce_zinb_DE$ind_cov,
+                           use.assay.type = "weights")
+colnames(pb) <- paste0("identifier_", 1:ncol(pb))
+pb$data_type <- "pb"
+pb$group_id <- pb$mock_group
+pb$cluster_id <- factor("ncM")
+pb
+```
+
+```{r}
+res_DE <- apply_qbGLM_offset_local(sce = pb)
+table(rowData(pb)$is_DE,res_DE$FDR < 0.05)
+```
+
+## Regular
+
+```{r}
+sce_bin <- sce
+assay(sce_bin)[assay(sce_bin)>=1] <- 1
+
+pb_orig <- aggregateAcrossCells(sce_bin,
+                                ids = sce_bin$ind_cov,
+                                use.assay.type = "counts")
+colnames(pb_orig) <- paste0("identifier_", 1:ncol(pb_orig))
+pb_orig$data_type <- "pb"
+pb_orig$group_id <- pb_orig$mock_group
+pb_orig$cluster_id <- factor("ncM")
+pb_orig
+```
+
+```{r}
+res_reg_DE <- apply_qbGLM_offset_local(sce = pb_orig)
+
+table(rowData(pb)$is_DE,res_DE$FDR < 0.05) # zinbwave
+table(rowData(pb)$is_DE,res_reg_DE$FDR < 0.05) # regular
+```
+
+Zinbwave: 127 FN, 27 FP
+Regular: 60 FN, 7 FP
+
+# Code Lieven
+
+```{r}
+# Make truncated ZINB and ZIP
+gen.trun(par=c(0), family="NBI",type="left",name="tr")
+# gen.trun(par=c(0), family="PO",type="left",name="tr")
+```
+
+```{r}
+set.seed(3410)
+mu=20
+sigma=.5
+hlp1 <- c(rNBI(30,mu=mu,sigma=sigma) ,rep(0,10))
+hlp2 <- c(rNBI(20,mu=mu/2,sigma=sigma) ,rep(0,20))
+hlp<-c(hlp1,hlp2)
+x <- as.factor(rep(1:2,each=40))
+```
+
+```{r}
+sce_ncM <- readRDS("./benchmarks/lupus/data/lupus-SCE_list-ncM-mock_replicates.rds")
+sce <- sce_ncM$replicate_1
+```
+
+```{r}
+pb <- aggregateAcrossCells(sce,
+                           ids = sce$ind_cov,
+                           use.assay.type = "counts")
+sum(assay(pb)==0)/(nrow(pb)*ncol(pb))
+# there are just 0.2% zero counts in the pseudobulk data, i.e, gene*patient
+# combinations with zero counts
+```
+
+```{r}
+# y <- calcNormFactors(sce)
+# sce$logOffset <- log(y$samples$lib.size) # + log(y$samples$norm.factors)
+# ind_cov + offset(logOffset) | ind_cov
+```
+
+```{r}
+hlp <- as.vector(assay(sce[2,])) # counts
+x <- as.factor(sce$ind_cov) # formula
+
+length(hlp)
+sum(hlp>0)
+length(x[hlp>0])
+length(unique(x[hlp>0]))
+```
+
+```{r}
+table(x[hlp>0])
+```
+
+
+```{r}
+# ZINB fit
+fit1 <- gamlss(hlp ~ x,
+               nu.formula =~ x,
+               family=ZINBI)
+
+# truncated NB fit of hurdle
+fit2 <- gamlss(hlp[hlp>0]~x[hlp>0],family=NBItr)
+
+# truncated Poisson fit of hurdle
+fit3 <- gamlss(hlp[hlp>0]~x[hlp>0],family=POtr)
+
+# truncated NB fit of hurdle 2
+fit4 <- hurdle(hlp ~ ind_cov | ind_cov,
+               data = colData(sce),
+               dist = "negbin",
+               zero.dist = "binomial")
+```
+
+```{r}
+fit2$sigma.coefficients
+-log(fit4$theta) # is this how to get sigma?
+```
+
+```{r}
+# Compare fits
+# These are patient-specific betas
+fits <- data.frame(mu.int=c(exp(c(fit1$mu.coefficients[1],
+                                  fit2$mu.coefficients[1],
+                                  fit3$mu.coefficients[1],
+                                  fit4$coefficients$count[1]))),
+                   mu.beta=c(exp(c(fit1$mu.coefficients[2],
+                                   fit2$mu.coefficients[2],
+                                   fit3$mu.coefficients[2],
+                                   fit4$coefficients$count[2]))),
+                   sigma=c(exp(c(fit1$sigma.coefficients,
+                                 fit2$sigma.coefficients,
+                                 NA, # no sigma because Poisson
+                                 -log(fit4$theta))))) 
+fits
+```
+
+```{r}
+# Compute the probability on positive count in patient 1
+
+# fit1: ZINB
+1-exp(fit1$nu.coefficient[1])/(1+exp(fit1$nu.coefficient[1]))
+
+# fit2: Hurdle NBItr
+mean(hlp[x=="IGTB141_IGTB141"]==0) # 0.46
+(1-mean(hlp[x=="IGTB141_IGTB141"]==0))/(1-dNBI(0,
+                                               mu=exp(fit2$mu.coefficients[1]),
+                                               sigma=exp(fit2$sigma.coefficients[1]))) # 
+
+# fit3: Hurdle POtr
+(1-mean(hlp[x=="IGTB141_IGTB141"]==0))/(1-dPO(0,
+                                               mu=exp(fit3$mu.coefficients[1])))
+
+# fit 4: Hurdle NBItr 2
+(1-mean(hlp[x=="IGTB141_IGTB141"]==0))/(1-dNBI(0,
+                                               mu=exp(fit4$coefficients$count[1]),
+                                               sigma=exp(-log(fit4$theta))))
+```
+
+Geen excess zeroes: hurdle geen goed schatting!
+Poisson leidt er mogelijks minder onder want maar 1 param te schatten
+
+```{r}
+table(x[hlp>0])
+```
+
+
+```{r}
+for(patient in levels(sce$ind_cov)){
+    hlp_p <- hlp[x==patient]
+
+    # ZINB fit
+    fit1 <- gamlss(hlp_p ~ 1,
+                   nu.formula =~ 1,
+                   family=ZINBI)
+    
+    # truncated NB fit of hurdle
+    fit2 <- gamlss(hlp_p[hlp_p>0]~1,family=NBItr)
+    
+    # truncated Poisson fit of hurdle
+    fit3 <- gamlss(hlp_p[hlp_p>0]~1,family=POtr)
+    
+    # truncated NB fit of hurdle 2
+    fit4 <- hurdle(hlp_p ~ 1 | 1,
+                   data = colData(sce),
+                   dist = "negbin",
+                   zero.dist = "binomial")
+    
+    fits <- data.frame(mu.int=c(exp(c(fit1$mu.coefficients[1],
+                                  fit2$mu.coefficients[1],
+                                  fit4$coefficients$count[1]))),
+                   sigma=c(exp(c(fit1$sigma.coefficients,
+                                 fit2$sigma.coefficients,
+                                 -log(fit4$theta))))) 
+    print(fits)
+}
+
+
+```
+
+
+
+```{r}
+# Compute the probability on positive count in patient 1
+
+# fit1: ZINB
+1-exp(fit1$nu.coefficient[1])/(1+exp(fit1$nu.coefficient[1]))
+
+# fit2: Hurdle NBItr
+mean(hlp[x=="IGTB141_IGTB141"]==0) # 0.46
+(1-mean(hlp[x=="IGTB141_IGTB141"]==0))/(1-dNBI(0,
+                                               mu=exp(fit2$mu.coefficients[1]),
+                                               sigma=exp(fit2$sigma.coefficients[1]))) # 
+
+# fit3: Hurdle POtr
+(1-mean(hlp[x=="IGTB141_IGTB141"]==0))/(1-dPO(0,
+                                               mu=exp(fit3$mu.coefficients[1])))
+
+# fit 4: Hurdle NBItr 2
+(1-mean(hlp[x=="IGTB141_IGTB141"]==0))/(1-dNBI(0,
+                                               mu=exp(fit4$coefficients$count[1]),
+                                               sigma=exp(-log(fit4$theta))))
+```
+
+
+```
+zinb_hurdle <- list(gene_2 = as.vector(assay(sce[2,])),
+                    gene_fitIssue = as.vector(assay(sce[1,])),
+                    patient = factor(sce$ind_cov),
+                    libsize = colSums(assay(sce)))
+
+saveRDS(zinb_hurdle, "zinb_hurdle.rds")
+```
+
+
+

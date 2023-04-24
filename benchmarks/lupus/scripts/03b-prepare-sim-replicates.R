@@ -57,7 +57,7 @@ stopifnot("prop_DE is not between 0 and 1" = dplyr::between(prop_DE, 0, 1))
 ## Libraries
 suppressPackageStartupMessages({
     library(SingleCellExperiment)
-    library(SCandwichCompanion)
+    library(DDCompanion)
     library(countsimQC)
     library(purrr)
 })

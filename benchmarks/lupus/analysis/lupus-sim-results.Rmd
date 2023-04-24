@@ -49,7 +49,7 @@ library(scater)
 library(scran)
 
 library(kableExtra)
-library(SCandwichCompanion)
+library(DDCompanion)
 library(iCOBRA)
 ```
 

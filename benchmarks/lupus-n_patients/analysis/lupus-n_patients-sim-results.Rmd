@@ -1,7 +1,7 @@
 ---
 title: "Lupus: influence of number of patients - simulation results"
 subtitle: "Results for `celltypes = ` `r params$celltype`"
-author: "Milan Malfait"
+author: "Milan Malfait & Jeroen Gilis"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   html_document:
@@ -14,7 +14,7 @@ output:
     code_folding: "hide"
 params:
     n_patients: !r c(10, 20, 30)
-    methods: !r c("muscat")
+    methods: !r c("bGLM")
     celltype: "ncM"
     prop_DE: 0.05
 editor_options:

@@ -228,18 +228,6 @@ apply_qbGLM_offset_squeeze <- function(sce,
         })
     }
 
-    # mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
-    #     countsAll <- cbind(bin_counts[i,],
-    #                        cd$ncells - bin_counts[i,])
-    #     full_formula <- as.formula(paste("countsAll",
-    #                                      paste(formula, collapse = " "),
-    #                                      "+ offset(logitOffset)"))
-    #     mod <- glm(formula = full_formula,
-    #                family = "quasibinomial",
-    #                data = cd)
-    #     return(mod)
-    # })
-
     # test coefficient of interest
     dfresid_mod <- sapply(mod, function(mod){mod$df.residual})
     sum_mod <- lapply(mod, summary)

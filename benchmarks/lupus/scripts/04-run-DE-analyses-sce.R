@@ -53,7 +53,7 @@ stopifnot(dir.exists(dirname(out_file)))
 suppressPackageStartupMessages({
     library(SingleCellExperiment)
     library(purrr)
-    library(SCandwichCompanion)
+    library(DDCompanion)
     library(scuttle)
     library(limma)
     library(edgeR)
@@ -85,7 +85,7 @@ sce_list_bin <- lapply(sce_list, function(element){
 
 # Run DE analyses ---------------------------------------------------------
 
-## Arguments for SCandwichCompanion::run_de_method()
+## Arguments for DDCompanion::run_de_method()
 tmp <- sce_list_bin[[1]]  # same for all replicates
 if (nlevels(tmp$batch_cov) == 1) {
     formula <- ~ group_id
