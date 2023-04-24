@@ -39,10 +39,10 @@ USE_METHODS := edgeR_QP edgeR_NB \
 	qbGLM qbGLM_offset
 
 # Mock and sim results for single-cell data
-MOCK_RESULTS := $(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),\
-	$(RESDIR)/lupus-$(CT)-mock_results-sce-$(M).rds))
-SIM_RESULTS := $(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),\
-	$(foreach P,$(_PROP_DE),$(RESDIR)/lupus-$(CT)-sim_results-sce-$(M)-prop_DE-$(P).rds)))
+#MOCK_RESULTS := $(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),\
+#	$(RESDIR)/lupus-$(CT)-mock_results-sce-$(M).rds))
+#SIM_RESULTS := $(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),\
+#	$(foreach P,$(_PROP_DE),$(RESDIR)/lupus-$(CT)-sim_results-sce-$(M)-prop_DE-$(P).rds)))
 
 # Mock results for pseudobulk data
 MOCK_RESULTS_PB := $(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),\
@@ -84,40 +84,40 @@ all: analysis figures results
 #		--use_celltypes $(USE_CELLTYPES)
 
 ## mock_rep_data: generate mock data replicates
-mock_rep_data: $(MOCK_REP_DATA)
+#mock_rep_data: $(MOCK_REP_DATA)
 
-$(DATADIR)/lupus-SCE_list-%-mock_replicates.rds: $(MOCK_CT_SUBDIR)/lupus-SCE-mock-%.rds \
-scripts/03-prepare-mock-replicates.R $(PKG_STATUS)
-	@echo "\nGenerating $@"
-	$(R) scripts/03-prepare-mock-replicates.R -v --infile $< --outfile $@ \
-		--n_mock_replicates 5
+#$(DATADIR)/lupus-SCE_list-%-mock_replicates.rds: $(MOCK_CT_SUBDIR)/lupus-SCE-mock-%.rds \
+#scripts/03-prepare-mock-replicates.R $(PKG_STATUS)
+#	@echo "\nGenerating $@"
+#	$(R) scripts/03-prepare-mock-replicates.R -v --infile $< --outfile $@ \
+#		--n_mock_replicates 5
 
 ## sim_rep_data: generate simulated data replicates
-sim_rep_data: $(SIM_REP_DATA)
+#sim_rep_data: $(SIM_REP_DATA)
 
-define sim_rep_rule
-$(DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(subst .,_,$(P)).rds: \
-$(DATADIR)/lupus-SCE_list-$(CT)-mock_replicates.rds \
-scripts/03b-prepare-sim-replicates.R $(PKG_STATUS)
-	@echo "\nGenerating $$@"
-	$(R) scripts/03b-prepare-sim-replicates.R -v --infile $$< --outfile $$@ \
-		--prop_DE $(P)
-endef
+#define sim_rep_rule
+#$(DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(subst .,_,$(P)).rds: \
+#$(DATADIR)/lupus-SCE_list-$(CT)-mock_replicates.rds \
+#scripts/03b-prepare-sim-replicates.R $(PKG_STATUS)
+#	@echo "\nGenerating $$@"
+#	$(R) scripts/03b-prepare-sim-replicates.R -v --infile $$< --outfile $$@ \
+#		--prop_DE $(P)
+#endef
  # --countsimQC
 
-$(foreach CT,$(USE_ALL),$(foreach P,$(PROP_DE),$(eval $(call sim_rep_rule))))
+#$(foreach CT,$(USE_ALL),$(foreach P,$(PROP_DE),$(eval $(call sim_rep_rule))))
 
 
 # RESULTS ---------------------------------------------------------------------
 
 ## results: generate results
-results: mock_results sim_results mock_results_pb sim_results_pb
+results: mock_results_pb sim_results_pb # mock_results sim_results 
 
 ## mock_results: generate mock DE results for single-cell data
-mock_results: $(MOCK_RESULTS)
+#mock_results: $(MOCK_RESULTS)
 
 ## sim_results: generate simulated DE results for single-cell data
-sim_results: $(SIM_RESULTS)
+#sim_results: $(SIM_RESULTS)
 
 ## mock_results_pb: generate mock DE results for pseudobulk data
 mock_results_pb: $(MOCK_RESULTS_PB)
@@ -126,26 +126,26 @@ mock_results_pb: $(MOCK_RESULTS_PB)
 sim_results_pb: $(SIM_RESULTS_PB)
 
 ## Mock results for single-cell data
-define run_mock_rule
-$(RESDIR)/lupus-$(CT)-mock_results-sce-$(M).rds: $(DATADIR)/lupus-SCE_list-$(CT)-mock_replicates.rds \
-scripts/04-run-DE-analyses-sce.R $(PKG_STATUS)
-	@echo "\nGenerating $$@ from $$<"
-	mkdir -p $(RESDIR)
-	$(R) scripts/04-run-DE-analyses-sce.R -v -i $$< -o $$@ --method $(M)
-endef
-$(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),$(eval $(call run_mock_rule))))
+#define run_mock_rule
+#$(RESDIR)/lupus-$(CT)-mock_results-sce-$(M).rds: $(DATADIR)/lupus-SCE_list-$(CT)-mock_replicates.rds \
+#scripts/04-run-DE-analyses-sce.R $(PKG_STATUS)
+#	@echo "\nGenerating $$@ from $$<"
+#	mkdir -p $(RESDIR)
+#	$(R) scripts/04-run-DE-analyses-sce.R -v -i $$< -o $$@ --method $(M)
+#endef
+#$(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),$(eval $(call run_mock_rule))))
 
 ## Simulation results for single-cell data
-define run_sim_rule
-$(RESDIR)/lupus-$(CT)-sim_results-sce-$(M)-prop_DE-$(P).rds: \
-$(DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds \
-scripts/04-run-DE-analyses-sce.R $(PKG_STATUS)
-	@echo "\nGenerating $$@ from $$<"
-	mkdir -p $(RESDIR)
-	$(R) scripts/04-run-DE-analyses-sce.R -v -i $$< -o $$@ --method $(M)
-endef
-$(foreach CT,$(USE_CELLTYPES),$(foreach M,$(USE_METHODS),$(foreach P,$(_PROP_DE),\
-	$(eval $(call run_sim_rule,$(CT),$(M),$(P))))))
+#define run_sim_rule
+#$(RESDIR)/lupus-$(CT)-sim_results-sce-$(M)-prop_DE-$(P).rds: \
+#$(DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds \
+#scripts/04-run-DE-analyses-sce.R $(PKG_STATUS)
+#	@echo "\nGenerating $$@ from $$<"
+#	mkdir -p $(RESDIR)
+#	$(R) scripts/04-run-DE-analyses-sce.R -v -i $$< -o $$@ --method $(M)
+#endef
+#$(foreach CT,$(USE_CELLTYPES),$(foreach M,$(USE_METHODS),$(foreach P,$(_PROP_DE),\
+#	$(eval $(call run_sim_rule,$(CT),$(M),$(P))))))
 
 ## Mock results for pseudobulk data
 define run_mock_pb_rule
