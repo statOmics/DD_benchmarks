@@ -21,11 +21,11 @@ parser$add_argument("-i", "--infile",
 )
 parser$add_argument("-o", "--outfile",
     type = "character",
-    default = "results/lupus-ncM-mock_results-muscat.rds",
+    default = "results/lupus-ncM-mock_results-bGLM.rds",
     help = "Output results file name. Default: \'%(default)s\'."
 )
 parser$add_argument("--method",
-    type = "character", default = "muscat",
+    type = "character", default = "bGLM",
     help = "DE methods to be run on the input data. Default: \'%(default)s\'."
 )
 
@@ -57,7 +57,10 @@ suppressPackageStartupMessages({
     library(scuttle)
     library(limma)
     library(edgeR)
+    library(BiocParallel)
 })
+
+print(packageVersion("DDCompanion"))
 
 # Prepare data ------------------------------------------------------------
 
@@ -95,10 +98,12 @@ if (nlevels(tmp$batch_cov) == 1) {
 
 ## Loop over nested list and run DE method on each SCE
 if (verbose) message("Runnig DE analyses...")
+
 out <- map(sce_list_bin, run_de_method,
     method = args$method,
     formula = formula,
     coef = "group_idB",
+    BPPARAM = BiocParallel::MulticoreParam(workers=1),
     combined = FALSE
 )
 

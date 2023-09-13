@@ -58,6 +58,8 @@ suppressPackageStartupMessages({
     library(limma)
 })
 
+print(packageVersion("DDCompanion"))
+
 # Prepare data ------------------------------------------------------------
 
 ## Load data
@@ -107,6 +109,7 @@ out <- map(pb_list_bin, run_de_method,
     method = args$method,
     formula = formula,
     coef = "group_idB",
+    BPPARAM = BiocParallel::MulticoreParam(workers=4),
     combined = FALSE
 )
 

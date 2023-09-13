@@ -1,6 +1,8 @@
 ## Convert lupus data to SCE and clean metadata
 ## ============================================
 
+#renv::restore("../..")
+
 ## Directory setup
 here_root <- "benchmarks/lupus"
 here::i_am(file.path(here_root, "scripts", "00-anndata-to-SCE.R"))
@@ -11,16 +13,19 @@ fs::dir_create(out_dir <- here::here(here_root, "data"))
 
 out_file <- file.path(out_dir, "lupus-SCE-cleaned.rds")
 
-
 ## Check zellkonverter version
-(zell_version <- packageVersion("zellkonverter"))
-stopifnot(numeric_version(zell_version) >= numeric_version("1.1.5"))
-
 suppressPackageStartupMessages({
     library(zellkonverter)
     library(scuttle)
     library(dplyr)
 })
+
+(zell_version <- packageVersion("zellkonverter"))
+stopifnot(numeric_version(zell_version) >= numeric_version("1.11.1"))
+
+print(packageVersion("dplyr"))
+print(packageVersion("scuttle"))
+print(packageVersion("zellkonverter"))
 
 ## Load raw data as HDF5-backed
 lupus_file <- file.path(in_dir, "GSE174188_CLUES1_adjusted.h5ad")
@@ -75,6 +80,8 @@ rownames(sample_metadata) <- sample_metadata$sample
 ## Add to metadata(lupus)
 metadata(sce) <- list(sample_metadata = sample_metadata)
 
+## add rownames
+rownames(sce) <- rowData(sce)$gene_ids
 
 # Export data -------------------------------------------------------------
 
