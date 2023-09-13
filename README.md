@@ -67,3 +67,13 @@ to run them all in one go.
 
 **Note** that this will take **a considerable amount of time** and computational resources. It is
 recommended to run this on an HPC instance.
+
+After running all the benchmarks, or downloading the benchmark results from ZENODO, the figures from our manuscript 
+and supplementary materials can be easily reproduced by running
+
+```sh
+make figures
+```
+
+This will create a figures folder populated with all the manuscript figures. The script will take approximately 20 minutes
+to run.

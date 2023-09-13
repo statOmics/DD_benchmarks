@@ -1,5 +1,5 @@
-.PHONY: all lupus covid benchmarks package clean clean-lupus clean-covid \
-	lupus lupus-n_patients covid figures
+.PHONY: all benchmarks package clean clean-lupus clean-covid \
+	lupus lupus-n_patients covid stagewise figures
 
 R := Rscript --no-save --no-restore
 
@@ -17,6 +17,9 @@ lupus-n_patients: package
 covid: package
 	$(MAKE) -C benchmarks/covid
 
+stagewise: package
+	$(MAKE) -C benchmarks/stagewise
+
 ## package: install the helper package DDCompanion
 package: install.done
 install.done: package/DESCRIPTION
@@ -24,7 +27,10 @@ install.done: package/DESCRIPTION
 	R CMD INSTALL package
 	@touch $@
 
-FIGURES := figure1.pdf figure2.pdf figure3.pdf figure4.pdf figure5.pdf
+FIGURES := fig1_lupus_ncM_mock.png figS1_lupus_ncM_mock.png figS2_lupus_T4naive_mock.png \
+	figS3_lupus_Bmem_mock.png figS4_lupus_mock_sce.png figS5_covid_class_switched_mock.png \
+	figS6_covid_immature_mock.png figS7_covid_naive_mock.png figS9_lupus_sim_all.png \
+	fig2_lupus_sim_5v5.png figS8_lupus_sim_all_alt.png figS10_covid_sim_all.png
 FIGURES := $(patsubst %, figures/%, $(FIGURES))
 
 ## figures: generate figures
