@@ -10,8 +10,8 @@ R := Rscript --no-save --no-restore
 PKG_STATUS := ../../install.done
 
 # Number of patients to use for MOCK data, if missing will use all available
-N_PATIENTS := 30 # 10 20
-USE_CELLTYPES := T4_naive ncM
+N_PATIENTS := 10 20 30
+USE_CELLTYPES := T4_naive ncM B_mem
 
 INPUT_DATADIR := ../lupus/data
 DATADIR := data
@@ -57,35 +57,35 @@ all: analysis results
 # DATA ------------------------------------------------------------------------
 
 ## data: generate processed data
-#data: $(DATA)
+data: $(DATA)
 
 ## mock_rep_data: generate mock data replicates
-#mock_rep_data: $(MOCK_REP_DATA)
+mock_rep_data: $(MOCK_REP_DATA)
 
-#define mock_rep_rule
-#$(DATADIR)/lupus-n_patients-$(NP)-SCE_list-$(CT)-mock_replicates.rds: \
-#$(INPUT_DATADIR)/lupus-SCE_list-$(CT)-mock_replicates.rds \
-#scripts/01-sample-patients.R
-#	@echo "\nGenerating $$@ from $$<"
-#	mkdir -p $(DATADIR)
-#	$(R) scripts/01-sample-patients.R -v -i $$< -o $$@ --n_patients $(NP)
-#endef
-#$(foreach NP,$(N_PATIENTS),$(foreach CT,$(USE_CELLTYPES),\
-#	$(eval $(call mock_rep_rule))))
+define mock_rep_rule
+$(DATADIR)/lupus-n_patients-$(NP)-SCE_list-$(CT)-mock_replicates.rds: \
+$(INPUT_DATADIR)/lupus-SCE_list-$(CT)-mock_replicates.rds \
+scripts/01-sample-patients.R
+	@echo "\nGenerating $$@ from $$<"
+	mkdir -p $(DATADIR)
+	$(R) scripts/01-sample-patients.R -v -i $$< -o $$@ --n_patients $(NP)
+endef
+$(foreach NP,$(N_PATIENTS),$(foreach CT,$(USE_CELLTYPES),\
+	$(eval $(call mock_rep_rule))))
 
 ## sim_rep_data: generate sim data replicates
-#sim_rep_data: $(SIM_REP_DATA)
+sim_rep_data: $(SIM_REP_DATA)
 
-#define sim_rep_rule
-#$(DATADIR)/lupus-n_patients-$(NP)-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds: \
-#$(INPUT_DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds \
-#scripts/01-sample-patients.R
-#	@echo "\nGenerating $$@ from $$<"
-#	mkdir -p $(DATADIR)
-#	$(R) scripts/01-sample-patients.R -v -i $$< -o $$@ --n_patients $(NP)
-#endef
-#$(foreach NP,$(N_PATIENTS),$(foreach CT,$(USE_CELLTYPES),$(foreach P,$(_PROP_DE),\
-#	$(eval $(call sim_rep_rule)))))
+define sim_rep_rule
+$(DATADIR)/lupus-n_patients-$(NP)-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds: \
+$(INPUT_DATADIR)/lupus-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds \
+scripts/01-sample-patients.R
+	@echo "\nGenerating $$@ from $$<"
+	mkdir -p $(DATADIR)
+	$(R) scripts/01-sample-patients.R -v -i $$< -o $$@ --n_patients $(NP)
+endef
+$(foreach NP,$(N_PATIENTS),$(foreach CT,$(USE_CELLTYPES),$(foreach P,$(_PROP_DE),\
+	$(eval $(call sim_rep_rule)))))
 
 
 # RESULTS ---------------------------------------------------------------------
@@ -94,22 +94,22 @@ all: analysis results
 results: mock_results sim_results
 
 ## mock_results: generate mock DE results on individual celltypes
-#mock_results: $(MOCK_RESULTS)
+mock_results: $(MOCK_RESULTS)
 
 ## sim_results: generate simulated DE results on individual celltypes
 sim_results: $(SIM_RESULTS)
 
 ## Mock results on individual celltypes
-#define run_mock_rule
-#$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-mock_results-pb-$(M).rds: \
-#$(DATADIR)/lupus-n_patients-$(NP)-SCE_list-$(CT)-mock_replicates.rds \
-#scripts/02-run-DE-analyses.R
-#	@echo "\nGenerating $$@ from $$<"
-#	mkdir -p $(RESDIR)
-#	$(R) scripts/02-run-DE-analyses.R -v -i $$< -o $$@ --method $(M)
-#endef
-#$(foreach NP,$(N_PATIENTS),$(foreach CT,$(USE_CELLTYPES),$(foreach M,$(USE_METHODS),\
-#	$(eval $(call run_mock_rule)))))
+define run_mock_rule
+$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-mock_results-pb-$(M).rds: \
+$(DATADIR)/lupus-n_patients-$(NP)-SCE_list-$(CT)-mock_replicates.rds \
+scripts/02-run-DE-analyses.R
+	@echo "\nGenerating $$@ from $$<"
+	mkdir -p $(RESDIR)
+	$(R) scripts/02-run-DE-analyses.R -v -i $$< -o $$@ --method $(M)
+endef
+$(foreach NP,$(N_PATIENTS),$(foreach CT,$(USE_CELLTYPES),$(foreach M,$(USE_METHODS),\
+	$(eval $(call run_mock_rule)))))
 
 define run_sim_rule
 $(RESDIR)/lupus-n_patients-$(NP)-$(CT)-sim_results-pb-$(M)-prop_DE-$(P).rds: \

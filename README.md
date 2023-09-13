@@ -53,7 +53,8 @@ From the command line at the root of this repository, run
 
 ```sh
 make lupus
-make lupus-n_patients
+make lupus-n_patients # can only be run after running `make lupus` first
+make stagewise # can only be run after running `make lupus` and `make lupus-n_patients` first
 make covid
 ```
 

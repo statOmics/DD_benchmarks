@@ -18,8 +18,13 @@ here::i_am("DD_stageR.Rmd")
 
 # Load libraries
 
-```{r, message=FALSE, warning=FALSE}
+```{r}
 library(DDCompanion)
+message(packageVersion("DDCompanion"))
+stopifnot(packageVersion("DDCompanion") == "0.1.15")
+```
+
+```{r, message=FALSE, warning=FALSE}
 library(scuttle)
 library(edgeR)
 library(pbapply)

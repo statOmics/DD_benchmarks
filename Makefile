@@ -14,11 +14,11 @@ lupus: package
 lupus-n_patients: package
 	$(MAKE) -C benchmarks/lupus-n_patients
 
-covid: package
-	$(MAKE) -C benchmarks/covid
-
 stagewise: package
 	$(MAKE) -C benchmarks/stagewise
+
+covid: package
+	$(MAKE) -C benchmarks/covid
 
 ## package: install the helper package DDCompanion
 package: install.done
