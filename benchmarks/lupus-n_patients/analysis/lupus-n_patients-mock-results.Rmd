@@ -86,7 +86,10 @@ res_files <- map(n_patients, ~ get_mock_res_files(
 )) %>%
     set_names(paste0("n_patients_", n_patients))
 
-res_list <- map_depth(res_files, 2, readRDS)
+#res_list <- map_depth(res_files, 2, readRDS)
+res_list <- lapply(res_files, function(element){
+	lapply(element, readRDS)
+})
 str(res_list, max.level = 3)
 ```
 
@@ -307,7 +310,7 @@ print_plots(pval_hist_strat_plots)
 
 ```{r session_info, echo=FALSE, cache=FALSE}
 Sys.time()
-git2r::repository()
+#git2r::repository()
 sessioninfo::session_info()
 ```
 
