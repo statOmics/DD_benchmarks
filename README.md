@@ -31,12 +31,18 @@ downloaded from GEO using accession number
 Download the
 `GSE174188_CLUES1_adjusted.h5ad.gz ` file and place it in the `data-raw/` directory under `benchmarks/lupus/`.
 
+### COVID data
+
+The COVID dataset from [Stephenson *et al.* (2021)](https://doi.org/10.1038/s41591-021-01329-2) should not be 
+downloaded manually, as it will be downloaded automatically when running the COVID benchmarks. 
+
 ## Running the benchmarks
 
 The `benchmarks/` folder contains the following benchmarks:
 
 * `lupus/`: benchmarks on the Lupus data
 * `lupus-n_patients/`: benchmarking the effect of the number of subjects using the Lupus data
+* `covid/`: benchmarks on the COVID data
 
 Each subfolder is accompanied by R scripts in a `scripts/` folder and R Markdown files in the
 `analysis/` folder. `Makefile`s are provided to control the order in which the scripts should be
@@ -48,6 +54,7 @@ From the command line at the root of this repository, run
 ```sh
 make lupus
 make lupus-n_patients
+make covid
 ```
 
 to run each of the respective benchmarks. Or simply

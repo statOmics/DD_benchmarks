@@ -18,6 +18,7 @@
 dev/
 data/
 data-raw/
+cache/
 notebooks/
 *.rds
 

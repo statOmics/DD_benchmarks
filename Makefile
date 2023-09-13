@@ -1,12 +1,12 @@
-.PHONY: all lupus ledergor benchmarks package clean clean-lupus clean-ledergor \
-	lupus lupus-n_patients ledergor figures
+.PHONY: all lupus covid benchmarks package clean clean-lupus clean-covid \
+	lupus lupus-n_patients covid figures
 
 R := Rscript --no-save --no-restore
 
 all: benchmarks
 
 ## benchmarks: run benchmarks
-benchmarks: ledergor lupus lupus-n_patients
+benchmarks: covid lupus lupus-n_patients
 
 lupus: package
 	$(MAKE) -C benchmarks/lupus
@@ -14,8 +14,8 @@ lupus: package
 lupus-n_patients: package
 	$(MAKE) -C benchmarks/lupus-n_patients
 
-ledergor: package
-	$(MAKE) -C benchmarks/ledergor
+covid: package
+	$(MAKE) -C benchmarks/covid
 
 ## package: install the helper package DDCompanion
 package: install.done
@@ -34,10 +34,10 @@ figures/$(FIGURES) &: figures.R
 	$(R) $<
 
 ## clean: remove all generated results
-clean: clean-lupus clean-ledergor
+clean: clean-lupus clean-covid
 
 clean-lupus:
 	$(MAKE) -C benchmarks/lupus clean
 
-clean-ledergor:
-	$(MAKE) -C benchmarks/ledergor clean
+clean-covid:
+	$(MAKE) -C benchmarks/covid clean
