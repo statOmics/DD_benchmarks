@@ -80,6 +80,7 @@ if (verbose) message("Runnig DE analyses...")
 out <- map(pb_list_bin, run_de_method,
     method = args$method,
     formula = formula,
+    BPPARAM = BiocParallel::MulticoreParam(workers=8),
     coef = "group_idB"
 )
 

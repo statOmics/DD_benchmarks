@@ -10,7 +10,7 @@ R := Rscript --no-save --no-restore
 PKG_STATUS := ../../install.done
 
 # Number of patients to use for MOCK data, if missing will use all available
-N_PATIENTS := 10 20 30
+N_PATIENTS := 30 # 10 20
 USE_CELLTYPES := T4_naive ncM
 
 INPUT_DATADIR := ../lupus/data
@@ -37,9 +37,10 @@ SIM_REP_DATA := \
 DATA := $(MOCK_REP_DATA) $(SIM_REP_DATA)
 
 
-USE_METHODS := edgeR_QP edgeR_NB \
-	qbGLM_offset_squeeze bGLM \
-	qbGLM qbGLM_offset
+USE_METHODS := edgeR_NB edgeR_QP \
+	edgeR_NB_optim edgeR_QP_optim \
+	bGLM qbGLM \
+	qbGLM_offset qbGLM_offset_squeeze
 
 # Mock and sim results for individual celltypes
 MOCK_RESULTS := $(foreach NP,$(N_PATIENTS),$(foreach M,$(USE_METHODS),$(foreach CT,$(USE_CELLTYPES),\
@@ -90,13 +91,13 @@ all: analysis results
 # RESULTS ---------------------------------------------------------------------
 
 ## results: generate results
-#results: mock_results sim_results
+results: mock_results sim_results
 
 ## mock_results: generate mock DE results on individual celltypes
 #mock_results: $(MOCK_RESULTS)
 
 ## sim_results: generate simulated DE results on individual celltypes
-#sim_results: $(SIM_RESULTS)
+sim_results: $(SIM_RESULTS)
 
 ## Mock results on individual celltypes
 #define run_mock_rule
@@ -110,16 +111,16 @@ all: analysis results
 #$(foreach NP,$(N_PATIENTS),$(foreach CT,$(USE_CELLTYPES),$(foreach M,$(USE_METHODS),\
 #	$(eval $(call run_mock_rule)))))
 
-#define run_sim_rule
-#$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-sim_results-pb-$(M)-prop_DE-$(P).rds: \
-#$(DATADIR)/lupus-n_patients-$(NP)-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds \
-#scripts/02-run-DE-analyses.R $(PKG_STATUS)
-#	@echo "\nGenerating $$@ from $$<"
-#	mkdir -p $(RESDIR)
-#	$(R) scripts/02-run-DE-analyses.R -v -i $$< -o $$@ --method $(M)
-#endef
-#$(foreach NP,$(N_PATIENTS),$(foreach CT,$(USE_CELLTYPES),$(foreach M,$(USE_METHODS),$(foreach P,$(_PROP_DE),\
-#	$(eval $(call run_sim_rule))))))
+define run_sim_rule
+$(RESDIR)/lupus-n_patients-$(NP)-$(CT)-sim_results-pb-$(M)-prop_DE-$(P).rds: \
+$(DATADIR)/lupus-n_patients-$(NP)-SCE_list-$(CT)-sim_replicates-prop_DE-$(P).rds \
+scripts/02-run-DE-analyses.R $(PKG_STATUS)
+	@echo "\nGenerating $$@ from $$<"
+	mkdir -p $(RESDIR)
+	$(R) scripts/02-run-DE-analyses.R -v -i $$< -o $$@ --method $(M)
+endef
+$(foreach NP,$(N_PATIENTS),$(foreach CT,$(USE_CELLTYPES),$(foreach M,$(USE_METHODS),$(foreach P,$(_PROP_DE),\
+	$(eval $(call run_sim_rule))))))
 
 
 # ANALYSIS --------------------------------------------------------------------
