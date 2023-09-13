@@ -4,7 +4,13 @@
 \alias{apply_bGLM}
 \title{Run a GLM ...}
 \usage{
-apply_bGLM(sce, coef_test = "group_idB", formula = ~batch_cov + group_id, ...)
+apply_bGLM(
+  sce,
+  coef_test = "group_idB",
+  formula = ~batch_cov + group_id,
+  BPPARAM = BPPARAM,
+  ...
+)
 }
 \arguments{
 \item{sce}{A SingleCellExperiment object.}
@@ -12,6 +18,8 @@ apply_bGLM(sce, coef_test = "group_idB", formula = ~batch_cov + group_id, ...)
 \item{coef_test}{Coefficient to test.}
 
 \item{formula}{Design formula.}
+
+\item{BPPARAM}{Parallel execution (ignored for edgeR functions)}
 
 \item{...}{Ignored.}
 }

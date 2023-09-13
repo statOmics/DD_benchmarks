@@ -3,6 +3,7 @@
 #' @param sce A SingleCellExperiment object.
 #' @param coef_test Coefficient to test.
 #' @param formula Design formula.
+#' @param BPPARAM Parallel execution (ignored for edgeR functions)
 #' @param ... Ignored.
 #'
 #' @return Results data.frame.
@@ -13,7 +14,11 @@
 apply_bGLM <- function(sce,
                        coef_test = "group_idB",
                        formula = ~ batch_cov + group_id,
+                       BPPARAM = BPPARAM,
                        ...) {
+
+    #print(BPPARAM)
+    BiocParallel::register(BPPARAM)
 
     # Prepare for fit
     bin_counts <- as.matrix(assay(sce))
@@ -24,26 +29,26 @@ apply_bGLM <- function(sce,
         formula <- as.formula(paste("y", paste(formula, collapse = " ")))
 
         # fit models
-        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+        mod <- BiocParallel::bplapply(seq_len(nrow(bin_counts)), function(i){
             y <- bin_counts[i,]
             cd$y <- y
             mod <- glm(formula = formula, family = "binomial", data = cd)
             return(mod)
-        })
+        }, BPPARAM=BPPARAM)
 
     } else if(all(cd$data_type == "pb")){
 
         full_formula <- as.formula(paste("cbind(succes,failure)",
                                          paste(formula, collapse = " ")))
 
-        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+        mod <- BiocParallel::bplapply(seq_len(nrow(bin_counts)), function(i){
             cd$succes <- bin_counts[i,]
             cd$failure <- cd$ncells - cd$succes
             mod <- glm(formula = full_formula,
                        family = "binomial",
                        data = cd)
             return(mod)
-        })
+        }, BPPARAM=BPPARAM)
     }
 
     # test coefficient of interest
@@ -53,7 +58,7 @@ apply_bGLM <- function(sce,
     SE <- sapply(sum_mod, function(summod){coef(summod)[coef_test,2]})
     disp <- sapply(sum_mod, function(summod){summod$dispersion})
     pval <- sapply(sum_mod, function(summod){coef(summod)[coef_test,4]})
-    res <- data.frame(gene = rownames(bin_counts)[1:100],
+    res <- data.frame(gene = rownames(bin_counts),
                       cluster_id = levels(cd$cluster_id),
                       logOdds = beta,
                       var_unscaled = var_unscaled,
@@ -66,11 +71,14 @@ apply_bGLM <- function(sce,
     return(res)
 }
 
-
 apply_qbGLM <- function(sce,
                         coef_test = "group_idB",
                         formula = ~ batch_cov + group_id,
+                        BPPARAM = BPPARAM,
                         ...) {
+
+    #print(BPPARAM)
+    BiocParallel::register(BPPARAM)
 
     # Prepare for fit
     bin_counts <- as.matrix(assay(sce))
@@ -81,26 +89,26 @@ apply_qbGLM <- function(sce,
         formula <- as.formula(paste("y", paste(formula, collapse = " ")))
 
         # fit models
-        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+        mod <- BiocParallel::bplapply(seq_len(nrow(bin_counts)), function(i){
             y <- bin_counts[i,]
             cd$y <- y
             mod <- glm(formula = formula, family = "quasibinomial", data = cd)
             return(mod)
-        })
+        }, BPPARAM=BPPARAM)
 
     } else if(all(cd$data_type == "pb")){
 
         full_formula <- as.formula(paste("cbind(succes,failure)",
                                          paste(formula, collapse = " ")))
 
-        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+        mod <- BiocParallel::bplapply(seq_len(nrow(bin_counts)), function(i){
             cd$succes <- bin_counts[i,]
             cd$failure <- cd$ncells - cd$succes
             mod <- glm(formula = full_formula,
                        family = "quasibinomial",
                        data = cd)
             return(mod)
-        })
+        }, BPPARAM=BPPARAM)
     }
 
     # test coefficient of interest
@@ -110,7 +118,7 @@ apply_qbGLM <- function(sce,
     SE <- sapply(sum_mod, function(summod){coef(summod)[coef_test,2]})
     disp <- sapply(sum_mod, function(summod){summod$dispersion})
     pval <- sapply(sum_mod, function(summod){coef(summod)[coef_test,4]})
-    res <- data.frame(gene = rownames(bin_counts)[1:100],
+    res <- data.frame(gene = rownames(bin_counts),
                       cluster_id = levels(cd$cluster_id),
                       logOdds = beta,
                       var_unscaled = var_unscaled,
@@ -126,7 +134,11 @@ apply_qbGLM <- function(sce,
 apply_qbGLM_offset <- function(sce,
                                coef_test = "group_idB",
                                formula = ~ batch_cov + group_id,
+                               BPPARAM = BPPARAM,
                                ...) {
+
+    #print(BPPARAM)
+    BiocParallel::register(BPPARAM)
 
     # Prepare for fit
     bin_counts <- as.matrix(assay(sce))
@@ -140,12 +152,12 @@ apply_qbGLM_offset <- function(sce,
                                     "+ offset(logitOffset)"))
 
         # fit models
-        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+        mod <- BiocParallel::bplapply(seq_len(nrow(bin_counts)), function(i){
             y <- bin_counts[i,]
             cd$y <- y
             mod <- glm(formula = formula, family = "quasibinomial", data = cd)
             return(mod)
-        })
+        }, BPPARAM=BPPARAM)
 
     } else if(all(cd$data_type == "pb")){
         offset <- colMeans(sweep(bin_counts, 2, cd$ncells, "/"))
@@ -155,14 +167,14 @@ apply_qbGLM_offset <- function(sce,
                                          paste(formula, collapse = " "),
                                          "+ offset(logitOffset)"))
 
-        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+        mod <- BiocParallel::bplapply(seq_len(nrow(bin_counts)), function(i){
             cd$succes <- bin_counts[i,]
             cd$failure <- cd$ncells - cd$succes
             mod <- glm(formula = full_formula,
                        family = "quasibinomial",
                        data = cd)
             return(mod)
-        })
+        }, BPPARAM=BPPARAM)
     }
 
     # test coefficient of interest
@@ -172,7 +184,7 @@ apply_qbGLM_offset <- function(sce,
     SE <- sapply(sum_mod, function(summod){coef(summod)[coef_test,2]})
     disp <- sapply(sum_mod, function(summod){summod$dispersion})
     pval <- sapply(sum_mod, function(summod){coef(summod)[coef_test,4]})
-    res <- data.frame(gene = rownames(bin_counts)[1:100],
+    res <- data.frame(gene = rownames(bin_counts),
                       cluster_id = levels(cd$cluster_id),
                       logOdds = beta,
                       var_unscaled = var_unscaled,
@@ -189,7 +201,10 @@ apply_qbGLM_offset <- function(sce,
 apply_qbGLM_offset_squeeze <- function(sce,
                                        coef_test = "group_idB",
                                        formula = ~ batch_cov + group_id,
+                                       BPPARAM = BPPARAM,
                                        ...) {
+    #print(BPPARAM)
+    BiocParallel::register(BPPARAM)
 
     # Prepare for fit
     bin_counts <- as.matrix(assay(sce))
@@ -203,12 +218,12 @@ apply_qbGLM_offset_squeeze <- function(sce,
                                     "+ offset(logitOffset)"))
 
         # fit models
-        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+        mod <- BiocParallel::bplapply(seq_len(nrow(bin_counts)), function(i){
             y <- bin_counts[i,]
             cd$y <- y
             mod <- glm(formula = formula, family = "quasibinomial", data = cd)
             return(mod)
-        })
+        }, BPPARAM=BPPARAM)
 
     } else if(all(cd$data_type == "pb")){
         offset <- colMeans(sweep(bin_counts, 2, cd$ncells, "/"))
@@ -218,14 +233,14 @@ apply_qbGLM_offset_squeeze <- function(sce,
                                          paste(formula, collapse = " "),
                                          "+ offset(logitOffset)"))
 
-        mod <- lapply(seq_len(nrow(bin_counts))[1:100], function(i){
+        mod <- BiocParallel::bplapply(seq_len(nrow(bin_counts)), function(i){
             cd$succes <- bin_counts[i,]
             cd$failure <- cd$ncells - cd$succes
             mod <- glm(formula = full_formula,
                        family = "quasibinomial",
                        data = cd)
             return(mod)
-        })
+        }, BPPARAM=BPPARAM)
     }
 
     # test coefficient of interest
@@ -246,7 +261,7 @@ apply_qbGLM_offset_squeeze <- function(sce,
     t <- beta / SE # new t-stat
     pval <- pt(-abs(t), df_post) * 2 # new pval
 
-    res <- data.frame(gene = rownames(bin_counts)[1:100],
+    res <- data.frame(gene = rownames(bin_counts),
                       cluster_id = levels(cd$cluster_id),
                       logOdds = beta,
                       var_unscaled = var_unscaled,

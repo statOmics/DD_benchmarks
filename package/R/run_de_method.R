@@ -1,11 +1,11 @@
 #' @export
-run_de_method <- function(sce, method, formula, coef, combined = FALSE) {
+run_de_method <- function(sce, method, formula, coef, BPPARAM, combined = FALSE) {
 
-    de_fun <- .get_method(method)
+    de_fun <- DDCompanion:::.get_method(method)
 
     ## Run DE method and measure elapsed runtime
     t <- system.time({
-        res <- de_fun(sce, coef = coef, formula = formula)
+        res <- de_fun(sce, coef = coef, formula = formula, BPPARAM = BPPARAM)
     })[[3]]
     out <- list(results = res, run_time = t)
     out

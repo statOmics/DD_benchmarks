@@ -1,17 +1,17 @@
 Package: DDCompanion
 Title: Helper functions for the differential detection project
-Version: 0.1.2
-Date: 2023-04-06
+Version: 0.1.15
+Date: 2023-05-12
 Authors@R:
     c(person(
-        "Milan", "Malfait", , "milan.malfait94@gmail.com",
-        role = c("aut", "cre"),
-        comment = c(ORCID = "0000-0001-9144-3701")
-    ),
-    person(
         "Jeroen", "Gilis", , "jeroen.gilis1@gmail.com",
         role = "aut",
         comment = c(ORCID = "0000-0001-8415-0943")
+    ), 
+    person(
+        "Milan", "Malfait", , "milan.malfait94@gmail.com",
+        role = c("aut", "cre"),
+        comment = c(ORCID = "0000-0001-9144-3701")
     ))
 Description: Collection of helper functions used throughout the differential detection project.
 License: Artistic-2.0
@@ -25,7 +25,8 @@ Imports:
     ggplot2,
     here,
     iCOBRA,
-    methods,
+    methods,	
+    limma,
     purrr,
     S4Vectors,
     scater,
