@@ -1,0 +1,215 @@
+---
+title: "Differential detection: stagewise analysis under different scenarios"
+author: "Jeroen Gilis"
+date: "13/06/2023"
+output:
+    html_document:
+      code_download: true    
+      theme: cosmo
+      toc: true
+      toc_float: true
+      highlight: tango
+      number_sections: true
+---
+
+```{r}
+here::i_am("DD_stageR.Rmd")
+```
+
+# Load libraries
+
+```{r, message=FALSE, warning=FALSE}
+library(DDCompanion)
+library(scuttle)
+library(edgeR)
+library(pbapply)
+library(harmonicmeanp)
+library(stageR)
+library(iCOBRA)
+library(patchwork)
+library(ggplot2)
+```
+
+# Helper functions
+
+```{r}
+source("./DD_stageR_helpers.R")
+```
+
+# Load data
+
+```{r}
+sce_ncM_list <- readRDS("../lupus/data/lupus-SCE_list-ncM-mock_replicates.rds")
+pb_ncM_list_10 <- readRDS("../lupus-n_patients/data/lupus-n_patients-10-SCE_list-ncM-mock_replicates.rds")
+```
+
+```{r}
+# make same 5v5 comparisons as in lupus-n_patients analysis, i.e., with the
+# same mock group assignment and gene filtering
+sce_ncM_list_10 <- lapply(seq_along(sce_ncM_list), function(i,sce_ncM_list,pb_ncM_list_10){
+    patients_select <- pb_ncM_list_10[[i]]$ind_cov
+    object_10 <- sce_ncM_list[[i]][rownames(pb_ncM_list_10[[i]]),sce_ncM_list[[i]]$ind_cov %in% patients_select]
+    return(object_10)
+}, sce_ncM_list=sce_ncM_list, pb_ncM_list_10 = pb_ncM_list_10)
+```
+
+# Introduce DD
+
+```{r}
+set.seed(628716)
+
+simdata <- lapply(sce_ncM_list, function(object, 
+                                         prop_genes = 1/40, 
+                                         frac_cells = 1/4){
+    object$group_id <- object$mock_group
+
+    # original differential signal simulation strategy
+    object <- simulate_DE(x = object, 
+                          groups = object$mock_group, 
+                          prop_DE = prop_genes)
+    genes_to_change_1 <- rownames(object)[!is.na(rowData(object)$swapped_gene)]
+    
+    # First ad-hoc differential signal simulation strategy
+    genes_to_change_2 <- sample(rownames(object)[!rowData(object)$is_DE],
+                                nrow(object)*prop_genes)
+    object <- DD_adhoc_1(object = object,
+                         genes_to_change = genes_to_change_2,
+                         frac_cells = frac_cells)
+
+    # Second ad-hoc differential signal simulation strategy
+    genes_to_change_3 <- sample(rownames(object)[!rowData(object)$is_DE],
+                                nrow(object)*prop_genes)
+    object <- DD_adhoc_2(object = object,
+                         genes_to_change = genes_to_change_3,
+                         frac_cells = frac_cells)
+    
+    # Third ad-hoc differential signal simulation strategy
+    genes_to_change_4 <- sample(rownames(object)[!rowData(object)$is_DE],
+                                nrow(object)*prop_genes)
+    object <- DD_adhoc_3(object = object,
+                         genes_to_change = genes_to_change_4,
+                         frac_cells = frac_cells)
+    
+    changes <- rep(c("strategy_1", "strategy_2", "strategy_3", "strategy_4"),
+                   times = c(length(genes_to_change_1),
+                             length(genes_to_change_2),
+                             length(genes_to_change_3),
+                             length(genes_to_change_4)))
+    names(changes) <- c(genes_to_change_1,
+                        genes_to_change_2,
+                        genes_to_change_3,
+                        genes_to_change_4)
+    rowData(object)$changes <- "mock"
+    
+    rowData(object[names(changes),])$changes <- unname(changes)
+    
+    return(object)
+})
+```
+
+# Run analysis
+
+```{r}
+# DD analysis on each dataset
+DD_res_list <- lapply(simdata, function(object){DD_pb_edgeR_optim_NB(object)}) 
+
+# DE analysis on each dataset
+DE_res_list <- lapply(simdata, function(object){DE_pb_edgeR(object)}) 
+```
+
+# Wrangle results
+
+```{r}
+# allow for matching DD resutls with DE results
+for(i in 1:5){
+    removed_genes <- rownames(DE_res_list[[i]])[-which(rownames(DE_res_list[[i]]) %in% rownames(DD_res_list[[i]]))]
+    removed <- data.frame(logFC = rep(NA, length(removed_genes)),
+                          logCPM = rep(NA, length(removed_genes)),
+                          F = rep(NA, length(removed_genes)),
+                          PValue = rep(1, length(removed_genes)),
+                          FDR = rep(NA, length(removed_genes)),
+                          row.names = removed_genes)
+    DD_res_list[[i]] <- as.data.frame(rbind(DD_res_list[[i]], removed))
+    DD_res_list[[i]] <- DD_res_list[[i]][match(rownames(DE_res_list[[i]]), rownames(DD_res_list[[i]])),]
+}
+```
+
+```{r}
+# Concatenate results across replicates
+DD_res_pval <- unname(unlist(lapply(DD_res_list, "[[", "PValue")))
+DE_res_pval <- unname(unlist(lapply(DE_res_list, "[[", "PValue")))
+results <- as.data.frame(cbind(DD = DD_res_pval,
+                               DE = DE_res_pval))
+```
+
+```{r}
+# Get and concatenate truth files
+truth <- as.data.frame(do.call(rbind, lapply(simdata, function(object){
+    truth <- data.frame(gene = rownames(object),
+                    is_DE = rowData(object)$is_DE,
+                    strategy = factor(rowData(object)$changes))
+    rownames(truth) <- truth$gene
+    return(truth)
+})))
+rownames(results) <- rownames(truth)
+```
+
+# Visualize results
+
+```{r, message=FALSE, warning=FALSE}
+gg_all <- visualize_stageR_fdrtpr(DD_pval = results$DD, 
+                                  DE_pval = results$DE,
+                                  truth = truth) +
+    ggtitle("All DD/DE strategies") +
+    theme(plot.title = element_text(face="bold", size=14))
+
+gg_DD1 <- visualize_stageR_fdrtpr(DD_pval = results$DD[truth$strategy %in% c("mock","strategy_1")],
+                                  DE_pval = results$DE[truth$strategy %in% c("mock","strategy_1")],
+                                  truth = truth[truth$strategy %in% c("mock","strategy_1"),]) +
+    ggtitle("Swapping: strong DD, strong DE") +
+    theme(plot.title = element_text(face="bold", size=14))
+
+gg_DD2 <- visualize_stageR_fdrtpr(DD_pval = results$DD[truth$strategy %in% c("mock","strategy_2")], 
+                                  DE_pval = results$DE[truth$strategy %in% c("mock","strategy_2")],
+                                  truth = truth[truth$strategy %in% c("mock","strategy_2"),]) +
+    ggtitle("Ad-hoc strategy 1: strong DD, weak DE") +
+    theme(plot.title = element_text(face="bold", size=14))
+
+gg_DD3 <- visualize_stageR_fdrtpr(DD_pval = results$DD[truth$strategy %in% c("mock","strategy_3")], 
+                                  DE_pval = results$DE[truth$strategy %in% c("mock","strategy_3")],
+                                  truth = truth[truth$strategy %in% c("mock","strategy_3"),]) +
+    ggtitle("Ad-hoc strategy 2: strong DD, no DE") +
+    theme(plot.title = element_text(face="bold", size=14))
+
+gg_DD4 <- visualize_stageR_fdrtpr(DD_pval = results$DD[truth$strategy %in% c("mock","strategy_4")],
+                                  DE_pval = results$DE[truth$strategy %in% c("mock","strategy_4")],
+                                  truth = truth[truth$strategy %in% c("mock","strategy_4"),]) +
+    ggtitle("Ad-hoc strategy 3: weak DE, no DD") +
+    theme(plot.title = element_text(face="bold", size=14))
+
+layout <- "
+AABB
+CCDD
+#EE#
+"
+
+fig_all <- gg_DD1 + gg_DD2 + gg_DD3 + gg_DD4 + gg_all + 
+  plot_layout(design = layout, guides = 'collect') +
+    plot_annotation(tag_levels = 'A')
+
+png(filename =  file.path("figS11_stagewise.png"),
+    width     = 10,
+    height    = 12,
+    units     = "in",
+    res       = 200,
+    pointsize = 4)
+fig_all
+dev.off()
+```
+
+# sessionInfo
+
+```{r}
+sessionInfo()
+```
+
