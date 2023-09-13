@@ -93,7 +93,10 @@ res_files <- map(prop_DE, ~ get_sim_res_files(dataset = "lupus",
                                               prop_DE = .x, 
                                               celltype = celltype
 )) %>% set_names(paste0("prop_DE_", prop_DE))
-res_list <- map_depth(res_files, 2, readRDS)
+#res_list <- map_depth(res_files, 2, readRDS)
+res_list <- lapply(res_files, function(element){
+	lapply(element, readRDS)
+})
 
 ## Check for expected data structure
 stopifnot(unlist(map_depth(res_list, 3, ~ is.data.frame(.x$results))))
@@ -348,7 +351,7 @@ print_plots(fdr_tpr_plots_zoomed)
 
 ```{r session_info, echo=FALSE, cache=FALSE}
 Sys.time()
-git2r::repository()
+#git2r::repository()
 sessioninfo::session_info()
 ```
 
