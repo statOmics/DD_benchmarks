@@ -1,6 +1,5 @@
 here::i_am("figures.R")
 out_dir <- here::here("figures")
-fs::dir_create(out_dir)
 
 # Setup ------------------------------------------------------------------------
 
@@ -30,13 +29,13 @@ main_methods <- c("bGLM", "qbGLM", "qbGLM_offset", "qbGLM_offset_squeeze",
                   "edgeR_NB", "edgeR_QP", "edgeR_NB_optim", "edgeR_QP_optim")
 
 # Obtain helper functions for generating the figures----------------------------
-source("./figures_helpers.R")
+source("./figures/figures_helpers.R")
 message("Loaded helper functions to genrate figures")
 
 # Read and wrangle the data objects needed for the figures----------------------
 message("Started reading and wrangling data for figures")
 message("This will take a couple of minutes")
-source("./figures_prepare.R")
+source("./figures/figures_prepare.R")
 message("Finished reading and wrangling data for figures")
 
 # Figure 1: Lupus T4_naive_10 mock results  ------------------------------------
