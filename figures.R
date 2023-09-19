@@ -30,7 +30,7 @@ main_methods <- c("bGLM", "qbGLM", "qbGLM_offset", "qbGLM_offset_squeeze",
 
 # Obtain helper functions for generating the figures----------------------------
 source("./figures/figures_helpers.R")
-message("Loaded helper functions to genrate figures")
+message("Loaded helper functions to generate figures")
 
 # Read and wrangle the data objects needed for the figures----------------------
 message("Started reading and wrangling data for figures")
