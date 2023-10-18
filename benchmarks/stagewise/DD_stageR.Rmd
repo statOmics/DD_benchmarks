@@ -13,6 +13,11 @@ output:
 ---
 
 ```{r}
+library(muscat)
+```
+
+
+```{r}
 here::i_am("DD_stageR.Rmd")
 ```
 
