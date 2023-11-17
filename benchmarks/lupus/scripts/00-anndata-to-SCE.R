@@ -83,6 +83,9 @@ metadata(sce) <- list(sample_metadata = sample_metadata)
 ## add rownames
 rownames(sce) <- rowData(sce)$gene_ids
 
+## make path relative for sharing with others
+sce@assays@data@listData$counts@seed@seed@filepath <- "./data-raw/GSE174188_CLUES1_adjusted.h5ad"
+
 # Export data -------------------------------------------------------------
 
 ## Save data as HDF5-backed SCE This will save the object with pointers to the
