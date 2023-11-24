@@ -9,10 +9,20 @@ base_theme <- function(...) {
         # panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.spacing = unit(1, "lines"),
-        strip.text = element_text(size = 10, face = "bold", color = "black"),
+        strip.text = element_text(size = 11, face = "bold", color = "black"),
         strip.background = element_blank(),
         ...
     )
+}
+
+label_func_grid_row <- function(stratifier_row) {
+    return(paste0(1:length(unique(stratifier_row)), ": ", stratifier_row))
+}
+label_func_grid_col <- function(stratifier_col) {
+    return(paste0("Panel ", LETTERS[1:length(unique(stratifier_col))], ": ", stratifier_col))
+}
+label_func_wrap <- function(stratifier_row) {
+    return(paste0("Panel ", LETTERS[1:length(unique(stratifier_row))], ": ", stratifier_row))
 }
 
 # TODO this is now a ghost function, but if I remove it downstream code seems to break...
@@ -61,12 +71,15 @@ plot_mock <- function(data, multisample = c(TRUE, FALSE), stratifier_col, strati
         data$stratifier_col <- data[[stratifier_col]]
         data$stratifier_row <- data[[stratifier_row]]
         ggplot(data = data,
-               aes(PValue, col = stratifier_row, fill = stratifier_row)) +
+               aes(PValue, col = stratifier_row)) +
             geom_density(aes(y = after_stat(scaled), lty = replicate),
-                         adjust = 0.5, linewidth = 1, alpha = 0.1, bounds = c(0,1),
+                         adjust = 0.5, linewidth = 1, bounds = c(0,1),
                          key_glyph = "path"
             ) +
-            facet_grid(rows = vars(stratifier_row), cols = vars(stratifier_col)) +
+            facet_grid(rows = vars(stratifier_row),
+                       cols = vars(stratifier_col),
+                       labeller = labeller(stratifier_row = label_func_grid_row,
+                                           stratifier_col = label_func_grid_col)) +
             method_col_scale() +
             method_fill_scale() +
             scale_x_continuous(breaks = seq(0, 1, 0.2)) +
@@ -83,12 +96,14 @@ plot_mock <- function(data, multisample = c(TRUE, FALSE), stratifier_col, strati
     } else {
         data$stratifier_row <- data[[stratifier_row]]
         ggplot(data = data,
-               aes(PValue, col = stratifier_row, fill = stratifier_row)) +
+               aes(PValue, col = stratifier_row)) +
             geom_density(aes(y = after_stat(scaled), lty = replicate),
-                         adjust = 0.5, linewidth = 1, alpha = 0.1, bounds = c(0,1),
+                         adjust = 0.5, linewidth = 1, bounds = c(0,1),
                          key_glyph = "path"
             ) +
-            facet_wrap(stratifier_row, nrow = 2) +
+            facet_wrap(stratifier_row,
+                       nrow = 2,
+                       labeller = labeller(.rows = label_func_wrap)) +
             method_col_scale() +
             method_fill_scale() +
             scale_x_continuous(breaks = seq(0, 1, 0.2)) +
@@ -157,7 +172,7 @@ plot_fdr_control <- function(data, shape_by = NULL) {
                    ncol = 4, scales = "free_x") +
         geom_text(
             data = dat_text, aes(label = label), size = 6,
-            alpha = 0.5, hjust = 1, vjust = -0.5, parse = TRUE
+            alpha = 0.5, hjust = 0.4, vjust = -0.5, parse = TRUE
         ) +
         labs(x = NULL, y = "FDP") +
         method_fill_scale(guide = "none") +
