@@ -9,7 +9,7 @@ base_theme <- function(...) {
         # panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.spacing = unit(1, "lines"),
-        strip.text = element_text(size = 11, face = "bold", color = "black"),
+        strip.text = element_text(size = 10, face = "bold", color = "black"),
         strip.background = element_blank(),
         ...
     )
